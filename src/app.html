@@ -1,0 +1,226 @@
+<div id="app">
+
+  <!-- ============ JOURNAL ============ -->
+  <section class="screen active" id="scr-journal">
+    <div class="cal-wrap">
+      <div class="topbar" style="border:0;padding-bottom:4px">
+        <h1 id="cal-title" class="month" style="flex:1"></h1>
+        <button class="nav" id="prev-month" aria-label="Mois précédent"><svg viewBox="0 0 11 18"><path d="M9.5 1.5 2 9l7.5 7.5"/></svg></button>
+        <button class="today" id="btn-today">Aujourd'hui</button>
+        <button class="nav" id="next-month" aria-label="Mois suivant"><svg viewBox="0 0 11 18"><path d="M1.5 1.5 9 9l-7.5 7.5"/></svg></button>
+      </div>
+      <div class="dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="grid" id="cal-grid"></div>
+    </div>
+
+    <div class="scroll" id="day-scroll">
+      <div class="topbar" style="background:none;border:0;padding:0 0 10px">
+        <h1 id="day-title" style="font-size:19px"></h1>
+        <span class="saved-flag" id="saved-flag">Enregistré ✓</span>
+      </div>
+
+      <!-- Repas -->
+      <div class="card">
+        <h2><span class="ic">🍽️</span> Repas</h2>
+        <div id="meals"></div>
+      </div>
+
+      <!-- Activité -->
+      <div class="card">
+        <h2><span class="ic">🚶</span> Activité</h2>
+        <div class="field-label">Nombre de pas</div>
+        <div class="stepper">
+          <button type="button" data-steps="-500" aria-label="Retirer 500 pas">−</button>
+          <input type="number" inputmode="numeric" id="f-steps" placeholder="—" min="0" max="100000">
+          <button type="button" data-steps="500" aria-label="Ajouter 500 pas">+</button>
+          <span style="font-size:12.5px;color:var(--ink-3)">pas</span>
+        </div>
+        <div class="field-label">Activités</div>
+        <div class="chips" id="tags-activity"></div>
+        <div class="field-label">Durée totale d'activité</div>
+        <div class="slider-row">
+          <input type="range" id="f-actmin" min="0" max="240" step="5" value="0">
+          <output id="o-actmin">—</output>
+        </div>
+        <input type="text" id="f-activity-note" placeholder="Détails (intensité, ressenti…)" style="margin-top:10px">
+      </div>
+
+      <!-- Sommeil -->
+      <div class="card">
+        <h2><span class="ic">🌙</span> Sommeil</h2>
+        <div class="field-label">Durée</div>
+        <div class="slider-row">
+          <input type="range" id="f-sleep-h" min="0" max="14" step="0.25" value="7">
+          <output id="o-sleep-h">—</output>
+        </div>
+        <div class="field-label">Qualité</div>
+        <div class="seg" id="f-sleep-q" role="group" aria-label="Qualité du sommeil"></div>
+        <div class="row" style="margin-top:6px">
+          <span class="lbl">Douleurs<small>pendant la nuit / au réveil</small></span>
+          <button class="switch" id="f-pain" aria-pressed="false" aria-label="Douleurs"></button>
+        </div>
+        <div id="pain-details" hidden>
+          <div class="chips" id="tags-pain" style="margin-bottom:8px"></div>
+          <input type="text" id="f-pain-note" placeholder="Précisions sur les douleurs">
+        </div>
+        <div class="row">
+          <span class="lbl">Engourdissements<small>fourmillements, membres endormis</small></span>
+          <button class="switch" id="f-numb" aria-pressed="false" aria-label="Engourdissements"></button>
+        </div>
+        <div id="numb-details" hidden>
+          <div class="chips" id="tags-numb" style="margin-bottom:8px"></div>
+          <input type="text" id="f-numb-note" placeholder="Précisions sur les engourdissements">
+        </div>
+      </div>
+
+      <!-- Symptômes -->
+      <div class="card">
+        <h2><span class="ic">🩺</span> Symptômes</h2>
+        <div class="chips" id="tags-symptom"></div>
+        <textarea id="f-symptom-note" rows="2" placeholder="Autres symptômes, intensité, horaires…" style="margin-top:10px"></textarea>
+      </div>
+
+      <!-- Stress & humeur -->
+      <div class="card">
+        <h2><span class="ic">🧠</span> Stress &amp; humeur</h2>
+        <div class="field-label">Niveau de stress <span style="font-weight:400;color:var(--ink-3)">(0 = zen, 10 = maximal)</span></div>
+        <div class="slider-row">
+          <input type="range" id="f-stress" min="0" max="10" step="1" value="5">
+          <output id="o-stress">—</output>
+        </div>
+        <div class="field-label">Humeur du jour</div>
+        <div class="seg mood" id="f-mood" role="group" aria-label="Humeur du jour"></div>
+        <textarea id="f-mood-note" rows="2" placeholder="Note libre sur la journée…" style="margin-top:10px"></textarea>
+      </div>
+
+      <button class="btn danger" id="btn-clear-day">Effacer la saisie de ce jour</button>
+      <p class="hint" style="text-align:center">Tout est enregistré automatiquement sur cet iPhone.</p>
+    </div>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section class="screen" id="scr-stats">
+    <div class="topbar"><h1>Statistiques</h1></div>
+    <div class="scroll">
+      <div class="select-wrap" style="margin-bottom:12px">
+        <select id="period">
+          <option value="30">30 derniers jours</option>
+          <option value="90" selected>90 derniers jours</option>
+          <option value="180">6 derniers mois</option>
+          <option value="365">12 derniers mois</option>
+          <option value="0">Tout l'historique</option>
+        </select>
+      </div>
+      <div class="kpis" id="kpis"></div>
+
+      <div class="card">
+        <h2><span class="ic">🔗</span> Corrélations les plus fortes</h2>
+        <div id="corr-top"></div>
+        <p class="hint">Une corrélation n'est pas une cause : elle signale une piste à observer, pas une explication. Plus le nombre de jours comparés est grand, plus le signal est fiable.</p>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">📈</span> Explorateur</h2>
+        <div class="select-wrap" style="margin-bottom:8px"><select id="var-x"></select></div>
+        <div class="select-wrap" style="margin-bottom:8px"><select id="var-y"></select></div>
+        <div class="seg" id="lag-seg" role="group" aria-label="Décalage">
+          <button type="button" data-lag="0" aria-pressed="true">Même jour</button>
+          <button type="button" data-lag="1" aria-pressed="false">Effet le lendemain</button>
+        </div>
+        <div id="scatter-box" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">🏷️</span> Effet des tags</h2>
+        <div class="select-wrap" style="margin-bottom:10px"><select id="tag-target"></select></div>
+        <div id="tag-effects"></div>
+        <p class="hint">Comparaison de la moyenne les jours <em>avec</em> le tag et les jours <em>sans</em> (tags présents au moins 4 fois).</p>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">📅</span> Moyennes par semaine</h2>
+        <div id="weekly"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DONNÉES ============ -->
+  <section class="screen" id="scr-data">
+    <div class="topbar"><h1>Données</h1></div>
+    <div class="scroll">
+      <div id="backup-banner"></div>
+
+      <div class="card">
+        <h2><span class="ic">💾</span> Sauvegarde complète</h2>
+        <p class="hint" style="margin:0 0 12px">Le fichier <strong>.json</strong> contient absolument tout (saisies, tags personnalisés, réglages). C'est lui qu'il faudra réimporter en cas de changement de téléphone.</p>
+        <button class="btn" id="btn-export-json">Exporter la sauvegarde (.json)</button>
+        <button class="btn sec" id="btn-import">Importer une sauvegarde…</button>
+        <input type="file" id="file-import" accept="application/json,.json" class="sr">
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">📊</span> Export pour analyse</h2>
+        <p class="hint" style="margin:0 0 12px">Un fichier <strong>.csv</strong> à une ligne par jour, ouvrable dans Excel, Numbers ou n'importe quel outil d'analyse.</p>
+        <button class="btn sec" id="btn-export-csv">Exporter en CSV (1 ligne / jour)</button>
+        <button class="btn sec" id="btn-export-csv-long">Exporter en CSV détaillé (1 ligne / champ)</button>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">🏷️</span> Mes tags</h2>
+        <div id="tag-manager"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">ℹ️</span> À propos</h2>
+        <div id="storage-info"></div>
+        <button class="btn danger" id="btn-wipe" style="margin-top:12px">Tout effacer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TABS ============ -->
+  <nav class="tabbar" role="tablist">
+    <button role="tab" aria-selected="true" data-scr="journal">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
+      Journal
+    </button>
+    <button role="tab" aria-selected="false" data-scr="stats">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5V11M10 19.5V5.5M16 19.5v-6M22 19.5H2"/></svg>
+      Stats
+    </button>
+    <button role="tab" aria-selected="false" data-scr="data">
+      <svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3.2"/><path d="M4 6v6c0 1.8 3.6 3.2 8 3.2s8-1.4 8-3.2V6M4 12v6c0 1.8 3.6 3.2 8 3.2s8-1.4 8-3.2v-6"/></svg>
+      Données
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <dialog id="confirm-dlg">
+    <div class="dlg-body">
+      <h3 id="cf-title"></h3>
+      <p id="cf-text"></p>
+      <button class="btn danger" id="cf-ok"></button>
+      <button class="btn sec" id="cf-cancel" style="margin-top:8px">Annuler</button>
+    </div>
+  </dialog>
+
+  <dialog id="prompt-dlg">
+    <form class="dlg-body" id="prompt-form" method="dialog">
+      <h3 id="pr-title">Nouveau tag</h3>
+      <input type="text" id="pr-input" autocomplete="off" autocapitalize="sentences" placeholder="Nom du tag" style="margin-bottom:14px">
+      <button class="btn" id="pr-ok" type="submit">Ajouter</button>
+      <button class="btn sec" id="pr-cancel" type="button" style="margin-top:8px">Annuler</button>
+    </form>
+  </dialog>
+
+  <dialog id="import-dlg">
+    <div class="dlg-body">
+      <h3>Importer la sauvegarde</h3>
+      <p id="imp-text"></p>
+      <button class="btn" id="imp-merge">Fusionner avec mes données</button>
+      <button class="btn danger" id="imp-replace" style="margin-top:8px">Remplacer tout</button>
+      <button class="btn sec" id="imp-cancel" style="margin-top:8px">Annuler</button>
+    </div>
+  </dialog>
+</div>

@@ -1,0 +1,1769 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1, user-scalable=no">
+<title>Wellio — journal de santé</title>
+<meta name="description" content="Journal quotidien : repas, pas, activités, sommeil, symptômes, stress et humeur, avec calendrier, corrélations et export des données.">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a1a19" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Wellio">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/icons/icon-180.png">
+<link rel="icon" href="/icons/icon-192.png">
+</head>
+<body>
+<style>
+/* ---------- Wellio — feuille de style ---------- */
+:root {
+  color-scheme: light;
+  --bg: #f2f2f6;
+  --surface: #ffffff;
+  --surface-2: #f7f7f5;
+  --surface-3: #ececf0;
+  --ink: #0b0b0b;
+  --ink-2: #52514e;
+  --ink-3: #8a8a8f;
+  --line: #e1e0d9;
+  --line-strong: #c9c8c1;
+  --accent: #2a78d6;
+  --accent-soft: #e7f0fc;
+  --good: #0ca30c;
+  --warn: #fab219;
+  --crit: #d03b3b;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --s5: #e87ba4; --s6: #008300; --s7: #4a3aa7; --s8: #e34948;
+  --radius: 14px;
+  --tap: 44px;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tabbar: 58px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --bg: #0d0d0d;
+    --surface: #1a1a19;
+    --surface-2: #222221;
+    --surface-3: #2c2c2a;
+    --ink: #ffffff;
+    --ink-2: #c3c2b7;
+    --ink-3: #898781;
+    --line: #2c2c2a;
+    --line-strong: #383835;
+    --accent: #3987e5;
+    --accent-soft: #14283f;
+    --good: #0ca30c;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --bg: #0d0d0d; --surface: #1a1a19; --surface-2: #222221; --surface-3: #2c2c2a;
+  --ink: #ffffff; --ink-2: #c3c2b7; --ink-3: #898781;
+  --line: #2c2c2a; --line-strong: #383835;
+  --accent: #3987e5; --accent-soft: #14283f;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  --s5: #d55181; --s6: #008300; --s7: #9085e9; --s8: #e66767;
+}
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 16px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  overscroll-behavior-y: none;
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { background: none; border: 0; padding: 0; cursor: pointer; }
+input, textarea, select { font-size: 16px; }
+h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
+
+/* ---------- Structure ---------- */
+#app { height: 100%; display: flex; flex-direction: column; }
+.screen { flex: 1; min-height: 0; display: none; flex-direction: column; }
+.screen.active { display: flex; }
+
+.topbar {
+  padding: calc(var(--safe-top) + 10px) 16px 10px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--line);
+  display: flex; align-items: center; gap: 10px;
+}
+.topbar h1 { font-size: 20px; flex: 1; }
+.topbar .sub { font-size: 13px; color: var(--ink-3); font-weight: 400; }
+
+.scroll { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px calc(28px + var(--tabbar) + var(--safe-bottom)); }
+
+/* ---------- Barre d'onglets ---------- */
+.tabbar {
+  display: flex;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: saturate(180%) blur(18px);
+  -webkit-backdrop-filter: saturate(180%) blur(18px);
+  border-top: 1px solid var(--line);
+  padding-bottom: var(--safe-bottom);
+  position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+}
+.tabbar button {
+  flex: 1; height: var(--tabbar);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  color: var(--ink-3); font-size: 10.5px; font-weight: 550; letter-spacing: 0.01em;
+}
+.tabbar button svg { width: 23px; height: 23px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.tabbar button[aria-selected="true"] { color: var(--accent); }
+
+/* ---------- Calendrier ---------- */
+.cal-wrap { background: var(--surface); border-bottom: 1px solid var(--line); }
+.cal-head { display: flex; align-items: center; gap: 4px; padding: 0 12px 6px; }
+.cal-head .month { flex: 1; font-size: 17px; font-weight: 650; text-transform: capitalize; }
+.cal-head button.nav { width: 38px; height: 38px; display: grid; place-items: center; color: var(--accent); }
+.cal-head button.nav svg { width: 11px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+.cal-head button.today { color: var(--accent); font-size: 14px; font-weight: 550; padding: 8px 6px 8px 10px; }
+.dow { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 6px 2px; }
+.dow span { text-align: center; font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 6px 8px; }
+.day {
+  position: relative; aspect-ratio: 1 / 1; max-height: 46px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  font-size: 15px; color: var(--ink); border-radius: 50%;
+}
+.day.out { color: var(--ink-3); opacity: .45; }
+.day.future { opacity: .4; }
+.day .num { width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; font-variant-numeric: tabular-nums; }
+.day.today .num { color: var(--accent); font-weight: 700; }
+.day.sel .num { background: var(--accent); color: #fff; font-weight: 650; }
+.day.today.sel .num { color: #fff; }
+.dots { height: 5px; display: flex; gap: 2.5px; align-items: center; }
+.dot { width: 5px; height: 5px; border-radius: 50%; background: var(--line-strong); }
+.dot.filled { background: var(--accent); }
+.dot.sym { background: var(--s2); }
+.day.sel .dot { background: color-mix(in srgb, var(--accent) 45%, var(--ink-3)); }
+.day.sel .dot.filled { background: var(--accent); }
+
+/* ---------- Cartes / champs ---------- */
+.card { background: var(--surface); border-radius: var(--radius); padding: 14px; margin-bottom: 12px; border: 1px solid var(--line); }
+.card > h2 { font-size: 13px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-3); font-weight: 650; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+.card > h2 .ic { font-size: 15px; }
+.row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: var(--tap); }
+.row + .row { border-top: 1px solid var(--line); }
+.row .lbl { font-size: 15px; color: var(--ink); }
+.row .lbl small { display: block; font-size: 12px; color: var(--ink-3); }
+.field-label { font-size: 13px; font-weight: 600; color: var(--ink-2); margin: 12px 0 6px; }
+.field-label:first-child { margin-top: 0; }
+
+input[type="text"], input[type="number"], textarea {
+  width: 100%; background: var(--surface-2); border: 1px solid var(--line);
+  border-radius: 10px; padding: 10px 12px; outline: none; resize: none;
+}
+input[type="text"]:focus, input[type="number"]:focus, textarea:focus { border-color: var(--accent); background: var(--surface); }
+input::placeholder, textarea::placeholder { color: var(--ink-3); }
+input[type="number"] { -moz-appearance: textfield; }
+input[type="number"]::-webkit-outer-spin-button, input[type="number"]::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+
+/* Chips */
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  padding: 7px 11px; border-radius: 999px; background: var(--surface-2);
+  border: 1px solid var(--line); font-size: 13.5px; color: var(--ink-2); line-height: 1.1;
+}
+.chip.on { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 550; }
+.chip.add { border-style: dashed; color: var(--ink-3); }
+/* Rangée de tags défilante (repas) : garde la carte compacte */
+.chips-scroll { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; -webkit-overflow-scrolling: touch; }
+.chips-scroll::-webkit-scrollbar { display: none; }
+.chips-scroll .chip { flex: none; }
+.chip.tone-sym.on { background: var(--s2); border-color: var(--s2); }
+.chip.tone-act.on { background: var(--s3); border-color: var(--s3); }
+.chip.tone-food.on { background: var(--s7); border-color: var(--s7); }
+
+/* Segmented control */
+.seg { display: flex; background: var(--surface-3); border-radius: 10px; padding: 2px; gap: 2px; }
+.seg button { flex: 1; min-height: 34px; border-radius: 8px; font-size: 14px; color: var(--ink-2); }
+.seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.12); }
+.seg.mood button { font-size: 21px; }
+.seg.mood button[aria-pressed="true"] { transform: scale(1.02); }
+
+/* Slider */
+.slider-row { display: flex; align-items: center; gap: 12px; }
+.slider-row output { min-width: 42px; text-align: right; font-variant-numeric: tabular-nums; font-weight: 650; font-size: 17px; }
+input[type="range"] { -webkit-appearance: none; appearance: none; flex: 1; height: 28px; background: transparent; }
+input[type="range"]::-webkit-slider-runnable-track { height: 5px; border-radius: 3px; background: var(--surface-3); }
+input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); margin-top: -10.5px; border: 0.5px solid rgba(0,0,0,.06); }
+input[type="range"]::-moz-range-track { height: 5px; border-radius: 3px; background: var(--surface-3); }
+input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border: 0; border-radius: 50%; background: #fff; box-shadow: 0 1px 4px rgba(0,0,0,.3); }
+
+/* Toggle */
+.switch { width: 50px; height: 30px; border-radius: 999px; background: var(--surface-3); position: relative; transition: background .18s; flex: none; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 26px; height: 26px; border-radius: 50%; background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,.28); transition: transform .18s; }
+.switch[aria-pressed="true"] { background: var(--good); }
+.switch[aria-pressed="true"]::after { transform: translateX(20px); }
+
+/* Steps stepper */
+.stepper { display: flex; align-items: center; gap: 8px; }
+.stepper button { width: 34px; height: 34px; border-radius: 50%; background: var(--surface-3); display: grid; place-items: center; font-size: 19px; color: var(--accent); font-weight: 600; }
+.stepper input { width: 96px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.meal { border-top: 1px solid var(--line); padding-top: 10px; margin-top: 10px; }
+.meal:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
+.meal h3 { font-size: 14.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
+
+.hint { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; line-height: 1.4; }
+.saved-flag { font-size: 12px; color: var(--good); opacity: 0; transition: opacity .25s; }
+.saved-flag.on { opacity: 1; }
+
+/* Boutons */
+.btn { display: flex; align-items: center; justify-content: center; gap: 8px; min-height: var(--tap); width: 100%; border-radius: 12px; background: var(--accent); color: #fff; font-weight: 600; font-size: 15.5px; }
+.btn.sec { background: var(--surface-2); color: var(--accent); border: 1px solid var(--line); }
+.btn.danger { background: var(--surface-2); color: var(--crit); border: 1px solid var(--line); }
+.btn + .btn { margin-top: 8px; }
+
+/* ---------- Stats ---------- */
+.kpis { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 12px; }
+.kpi { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; }
+.kpi .v { font-size: 25px; font-weight: 650; letter-spacing: -0.02em; }
+.kpi .v small { font-size: 13px; font-weight: 500; color: var(--ink-3); }
+.kpi .k { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+.corr-item { display: flex; align-items: center; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); }
+.corr-item:first-of-type { border-top: 0; }
+.corr-item .txt { flex: 1; font-size: 14px; line-height: 1.35; }
+.corr-item .txt small { display: block; color: var(--ink-3); font-size: 12px; margin-top: 2px; }
+.rbadge { flex: none; width: 54px; text-align: center; border-radius: 8px; padding: 5px 0; font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums; color: #fff; }
+.bar-track { height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: 3px; }
+.select-wrap { display: flex; gap: 8px; }
+select { flex: 1; background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; min-height: var(--tap); }
+svg.chart { display: block; width: 100%; height: auto; overflow: visible; }
+svg.chart text { font: 500 10px system-ui, -apple-system, sans-serif; fill: var(--ink-3); }
+svg.chart .grid-line { stroke: var(--line); stroke-width: 1; }
+svg.chart .axis { stroke: var(--line-strong); stroke-width: 1; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px; font-size: 12px; color: var(--ink-2); margin-top: 8px; }
+.legend i { width: 9px; height: 9px; border-radius: 50%; display: inline-block; margin-right: 5px; vertical-align: -1px; }
+.empty { text-align: center; color: var(--ink-3); font-size: 14px; padding: 26px 10px; line-height: 1.5; }
+.empty .big { font-size: 30px; display: block; margin-bottom: 8px; }
+table.tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
+table.tbl th, table.tbl td { text-align: right; padding: 7px 4px; border-top: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+table.tbl th:first-child, table.tbl td:first-child { text-align: left; }
+table.tbl th { color: var(--ink-3); font-weight: 600; font-size: 11.5px; text-transform: uppercase; letter-spacing: .04em; border-top: 0; }
+
+/* ---------- Divers ---------- */
+.toast {
+  position: fixed; left: 50%; bottom: calc(var(--tabbar) + var(--safe-bottom) + 16px);
+  transform: translate(-50%, 16px); background: #1c1c1e; color: #fff; font-size: 14px;
+  padding: 11px 16px; border-radius: 12px; opacity: 0; pointer-events: none; transition: all .22s; z-index: 80; max-width: 88vw; text-align: center;
+}
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+.banner { background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent); color: var(--ink); border-radius: var(--radius); padding: 12px 14px; font-size: 13.5px; margin-bottom: 12px; display: flex; gap: 10px; align-items: flex-start; }
+.banner button { color: var(--accent); font-weight: 600; white-space: nowrap; }
+dialog { border: 0; border-radius: 16px; padding: 0; background: var(--surface); color: var(--ink); max-width: 340px; width: calc(100% - 48px); }
+dialog::backdrop { background: rgba(0,0,0,.45); }
+dialog .dlg-body { padding: 18px; }
+dialog h3 { font-size: 17px; margin-bottom: 8px; }
+dialog p { font-size: 14px; color: var(--ink-2); margin: 0 0 14px; line-height: 1.45; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+</style>
+
+<div id="app">
+
+  <!-- ============ JOURNAL ============ -->
+  <section class="screen active" id="scr-journal">
+    <div class="cal-wrap">
+      <div class="topbar" style="border:0;padding-bottom:4px">
+        <h1 id="cal-title" class="month" style="flex:1"></h1>
+        <button class="nav" id="prev-month" aria-label="Mois précédent"><svg viewBox="0 0 11 18"><path d="M9.5 1.5 2 9l7.5 7.5"/></svg></button>
+        <button class="today" id="btn-today">Aujourd'hui</button>
+        <button class="nav" id="next-month" aria-label="Mois suivant"><svg viewBox="0 0 11 18"><path d="M1.5 1.5 9 9l-7.5 7.5"/></svg></button>
+      </div>
+      <div class="dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
+      <div class="grid" id="cal-grid"></div>
+    </div>
+
+    <div class="scroll" id="day-scroll">
+      <div class="topbar" style="background:none;border:0;padding:0 0 10px">
+        <h1 id="day-title" style="font-size:19px"></h1>
+        <span class="saved-flag" id="saved-flag">Enregistré ✓</span>
+      </div>
+
+      <!-- Repas -->
+      <div class="card">
+        <h2><span class="ic">🍽️</span> Repas</h2>
+        <div id="meals"></div>
+      </div>
+
+      <!-- Activité -->
+      <div class="card">
+        <h2><span class="ic">🚶</span> Activité</h2>
+        <div class="field-label">Nombre de pas</div>
+        <div class="stepper">
+          <button type="button" data-steps="-500" aria-label="Retirer 500 pas">−</button>
+          <input type="number" inputmode="numeric" id="f-steps" placeholder="—" min="0" max="100000">
+          <button type="button" data-steps="500" aria-label="Ajouter 500 pas">+</button>
+          <span style="font-size:12.5px;color:var(--ink-3)">pas</span>
+        </div>
+        <div class="field-label">Activités</div>
+        <div class="chips" id="tags-activity"></div>
+        <div class="field-label">Durée totale d'activité</div>
+        <div class="slider-row">
+          <input type="range" id="f-actmin" min="0" max="240" step="5" value="0">
+          <output id="o-actmin">—</output>
+        </div>
+        <input type="text" id="f-activity-note" placeholder="Détails (intensité, ressenti…)" style="margin-top:10px">
+      </div>
+
+      <!-- Sommeil -->
+      <div class="card">
+        <h2><span class="ic">🌙</span> Sommeil</h2>
+        <div class="field-label">Durée</div>
+        <div class="slider-row">
+          <input type="range" id="f-sleep-h" min="0" max="14" step="0.25" value="7">
+          <output id="o-sleep-h">—</output>
+        </div>
+        <div class="field-label">Qualité</div>
+        <div class="seg" id="f-sleep-q" role="group" aria-label="Qualité du sommeil"></div>
+        <div class="row" style="margin-top:6px">
+          <span class="lbl">Douleurs<small>pendant la nuit / au réveil</small></span>
+          <button class="switch" id="f-pain" aria-pressed="false" aria-label="Douleurs"></button>
+        </div>
+        <div id="pain-details" hidden>
+          <div class="chips" id="tags-pain" style="margin-bottom:8px"></div>
+          <input type="text" id="f-pain-note" placeholder="Précisions sur les douleurs">
+        </div>
+        <div class="row">
+          <span class="lbl">Engourdissements<small>fourmillements, membres endormis</small></span>
+          <button class="switch" id="f-numb" aria-pressed="false" aria-label="Engourdissements"></button>
+        </div>
+        <div id="numb-details" hidden>
+          <div class="chips" id="tags-numb" style="margin-bottom:8px"></div>
+          <input type="text" id="f-numb-note" placeholder="Précisions sur les engourdissements">
+        </div>
+      </div>
+
+      <!-- Symptômes -->
+      <div class="card">
+        <h2><span class="ic">🩺</span> Symptômes</h2>
+        <div class="chips" id="tags-symptom"></div>
+        <textarea id="f-symptom-note" rows="2" placeholder="Autres symptômes, intensité, horaires…" style="margin-top:10px"></textarea>
+      </div>
+
+      <!-- Stress & humeur -->
+      <div class="card">
+        <h2><span class="ic">🧠</span> Stress &amp; humeur</h2>
+        <div class="field-label">Niveau de stress <span style="font-weight:400;color:var(--ink-3)">(0 = zen, 10 = maximal)</span></div>
+        <div class="slider-row">
+          <input type="range" id="f-stress" min="0" max="10" step="1" value="5">
+          <output id="o-stress">—</output>
+        </div>
+        <div class="field-label">Humeur du jour</div>
+        <div class="seg mood" id="f-mood" role="group" aria-label="Humeur du jour"></div>
+        <textarea id="f-mood-note" rows="2" placeholder="Note libre sur la journée…" style="margin-top:10px"></textarea>
+      </div>
+
+      <button class="btn danger" id="btn-clear-day">Effacer la saisie de ce jour</button>
+      <p class="hint" style="text-align:center">Tout est enregistré automatiquement sur cet iPhone.</p>
+    </div>
+  </section>
+
+  <!-- ============ STATS ============ -->
+  <section class="screen" id="scr-stats">
+    <div class="topbar"><h1>Statistiques</h1></div>
+    <div class="scroll">
+      <div class="select-wrap" style="margin-bottom:12px">
+        <select id="period">
+          <option value="30">30 derniers jours</option>
+          <option value="90" selected>90 derniers jours</option>
+          <option value="180">6 derniers mois</option>
+          <option value="365">12 derniers mois</option>
+          <option value="0">Tout l'historique</option>
+        </select>
+      </div>
+      <div class="kpis" id="kpis"></div>
+
+      <div class="card">
+        <h2><span class="ic">🔗</span> Corrélations les plus fortes</h2>
+        <div id="corr-top"></div>
+        <p class="hint">Une corrélation n'est pas une cause : elle signale une piste à observer, pas une explication. Plus le nombre de jours comparés est grand, plus le signal est fiable.</p>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">📈</span> Explorateur</h2>
+        <div class="select-wrap" style="margin-bottom:8px"><select id="var-x"></select></div>
+        <div class="select-wrap" style="margin-bottom:8px"><select id="var-y"></select></div>
+        <div class="seg" id="lag-seg" role="group" aria-label="Décalage">
+          <button type="button" data-lag="0" aria-pressed="true">Même jour</button>
+          <button type="button" data-lag="1" aria-pressed="false">Effet le lendemain</button>
+        </div>
+        <div id="scatter-box" style="margin-top:12px"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">🏷️</span> Effet des tags</h2>
+        <div class="select-wrap" style="margin-bottom:10px"><select id="tag-target"></select></div>
+        <div id="tag-effects"></div>
+        <p class="hint">Comparaison de la moyenne les jours <em>avec</em> le tag et les jours <em>sans</em> (tags présents au moins 4 fois).</p>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">📅</span> Moyennes par semaine</h2>
+        <div id="weekly"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DONNÉES ============ -->
+  <section class="screen" id="scr-data">
+    <div class="topbar"><h1>Données</h1></div>
+    <div class="scroll">
+      <div id="backup-banner"></div>
+
+      <div class="card">
+        <h2><span class="ic">💾</span> Sauvegarde complète</h2>
+        <p class="hint" style="margin:0 0 12px">Le fichier <strong>.json</strong> contient absolument tout (saisies, tags personnalisés, réglages). C'est lui qu'il faudra réimporter en cas de changement de téléphone.</p>
+        <button class="btn" id="btn-export-json">Exporter la sauvegarde (.json)</button>
+        <button class="btn sec" id="btn-import">Importer une sauvegarde…</button>
+        <input type="file" id="file-import" accept="application/json,.json" class="sr">
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">📊</span> Export pour analyse</h2>
+        <p class="hint" style="margin:0 0 12px">Un fichier <strong>.csv</strong> à une ligne par jour, ouvrable dans Excel, Numbers ou n'importe quel outil d'analyse.</p>
+        <button class="btn sec" id="btn-export-csv">Exporter en CSV (1 ligne / jour)</button>
+        <button class="btn sec" id="btn-export-csv-long">Exporter en CSV détaillé (1 ligne / champ)</button>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">🏷️</span> Mes tags</h2>
+        <div id="tag-manager"></div>
+      </div>
+
+      <div class="card">
+        <h2><span class="ic">ℹ️</span> À propos</h2>
+        <div id="storage-info"></div>
+        <button class="btn danger" id="btn-wipe" style="margin-top:12px">Tout effacer</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TABS ============ -->
+  <nav class="tabbar" role="tablist">
+    <button role="tab" aria-selected="true" data-scr="journal">
+      <svg viewBox="0 0 24 24"><rect x="3" y="4.5" width="18" height="16" rx="3"/><path d="M3 9.5h18M8 2.5v4M16 2.5v4"/></svg>
+      Journal
+    </button>
+    <button role="tab" aria-selected="false" data-scr="stats">
+      <svg viewBox="0 0 24 24"><path d="M4 19.5V11M10 19.5V5.5M16 19.5v-6M22 19.5H2"/></svg>
+      Stats
+    </button>
+    <button role="tab" aria-selected="false" data-scr="data">
+      <svg viewBox="0 0 24 24"><ellipse cx="12" cy="6" rx="8" ry="3.2"/><path d="M4 6v6c0 1.8 3.6 3.2 8 3.2s8-1.4 8-3.2V6M4 12v6c0 1.8 3.6 3.2 8 3.2s8-1.4 8-3.2v-6"/></svg>
+      Données
+    </button>
+  </nav>
+
+  <div class="toast" id="toast"></div>
+
+  <dialog id="confirm-dlg">
+    <div class="dlg-body">
+      <h3 id="cf-title"></h3>
+      <p id="cf-text"></p>
+      <button class="btn danger" id="cf-ok"></button>
+      <button class="btn sec" id="cf-cancel" style="margin-top:8px">Annuler</button>
+    </div>
+  </dialog>
+
+  <dialog id="prompt-dlg">
+    <form class="dlg-body" id="prompt-form" method="dialog">
+      <h3 id="pr-title">Nouveau tag</h3>
+      <input type="text" id="pr-input" autocomplete="off" autocapitalize="sentences" placeholder="Nom du tag" style="margin-bottom:14px">
+      <button class="btn" id="pr-ok" type="submit">Ajouter</button>
+      <button class="btn sec" id="pr-cancel" type="button" style="margin-top:8px">Annuler</button>
+    </form>
+  </dialog>
+
+  <dialog id="import-dlg">
+    <div class="dlg-body">
+      <h3>Importer la sauvegarde</h3>
+      <p id="imp-text"></p>
+      <button class="btn" id="imp-merge">Fusionner avec mes données</button>
+      <button class="btn danger" id="imp-replace" style="margin-top:8px">Remplacer tout</button>
+      <button class="btn sec" id="imp-cancel" style="margin-top:8px">Annuler</button>
+    </div>
+  </dialog>
+</div>
+
+
+<script>
+/* =======================================================================
+   Wellio — stockage & modèle de données
+   Tout est conservé localement sur l'appareil (IndexedDB + miroir
+   localStorage). Rien n'est envoyé sur un serveur.
+   ======================================================================= */
+'use strict';
+
+const APP_NAME = 'Wellio';
+const APP_VERSION = '1.0.0';
+const SCHEMA_VERSION = 1;
+const LS_KEY = 'wellio.db.v1';
+const IDB_NAME = 'wellio';
+const IDB_STORE = 'kv';
+
+const DEFAULT_TAGS = {
+  food: ['Fait maison', 'Légumes', 'Fruits', 'Protéines', 'Féculents', 'Laitages',
+    'Gluten', 'Sucre', 'Café', 'Alcool', 'Épicé', 'Plat industriel', 'Restaurant', 'Léger', 'Copieux'],
+  activity: ['Marche', 'Course', 'Vélo', 'Natation', 'Musculation', 'Yoga',
+    'Étirements', 'Randonnée', 'Jardinage', 'Ménage', 'Journée assise', 'Repos complet'],
+  symptom: ['Mal de tête', 'Migraine', 'Fatigue', 'Ballonnements', 'Nausée', 'Reflux',
+    'Douleurs articulaires', 'Douleurs musculaires', 'Mal de dos', 'Vertiges',
+    'Brouillard mental', 'Palpitations', 'Crampes', 'Démangeaisons', 'Essoufflement', 'Yeux secs'],
+  pain: ['Nuque', 'Épaules', 'Dos', 'Lombaires', 'Hanches', 'Genoux', 'Jambes', 'Mâchoire'],
+  numb: ['Main gauche', 'Main droite', 'Bras', 'Pieds', 'Jambes', 'Visage']
+};
+
+const MEALS = [
+  { key: 'breakfast', label: 'Petit-déjeuner', icon: '🌅' },
+  { key: 'lunch', label: 'Déjeuner', icon: '☀️' },
+  { key: 'dinner', label: 'Dîner', icon: '🌆' },
+  { key: 'bonus', label: 'Bonus / en-cas', icon: '🍪' }
+];
+
+const MOODS = [
+  { v: 1, e: '😞', l: 'Très mauvaise' },
+  { v: 2, e: '🙁', l: 'Mauvaise' },
+  { v: 3, e: '😐', l: 'Neutre' },
+  { v: 4, e: '🙂', l: 'Bonne' },
+  { v: 5, e: '😄', l: 'Très bonne' }
+];
+
+const SLEEP_Q = [
+  { v: 1, l: 'Très mauvaise' }, { v: 2, l: 'Mauvaise' }, { v: 3, l: 'Moyenne' },
+  { v: 4, l: 'Bonne' }, { v: 5, l: 'Excellente' }
+];
+
+/* ---------- état ---------- */
+let DB = null;
+
+function emptyEntry(date) {
+  return {
+    date,
+    meals: { breakfast: { text: '', tags: [] }, lunch: { text: '', tags: [] }, dinner: { text: '', tags: [] }, bonus: { text: '', tags: [] } },
+    steps: null,
+    activity: { tags: [], minutes: null, note: '' },
+    sleep: { hours: null, quality: null, pain: false, painTags: [], painNote: '', numbness: false, numbTags: [], numbNote: '' },
+    symptoms: { tags: [], note: '' },
+    stress: null,
+    mood: { score: null, note: '' },
+    updatedAt: null
+  };
+}
+
+function freshDB() {
+  return {
+    app: 'wellio',
+    schemaVersion: SCHEMA_VERSION,
+    createdAt: new Date().toISOString(),
+    entries: {},
+    tags: JSON.parse(JSON.stringify(DEFAULT_TAGS)),
+    settings: { lastExportAt: null }
+  };
+}
+
+/* ---------- IndexedDB minimal ---------- */
+function idb(mode, fn) {
+  return new Promise((resolve, reject) => {
+    if (!('indexedDB' in window)) return resolve(null);
+    let req;
+    try { req = indexedDB.open(IDB_NAME, 1); } catch (e) { return resolve(null); }
+    req.onupgradeneeded = () => { if (!req.result.objectStoreNames.contains(IDB_STORE)) req.result.createObjectStore(IDB_STORE); };
+    req.onerror = () => resolve(null);
+    req.onsuccess = () => {
+      try {
+        const tx = req.result.transaction(IDB_STORE, mode);
+        const out = fn(tx.objectStore(IDB_STORE));
+        tx.oncomplete = () => { req.result.close(); resolve(out && out.result !== undefined ? out.result : null); };
+        tx.onerror = () => { req.result.close(); resolve(null); };
+      } catch (e) { resolve(null); }
+    };
+  });
+}
+
+async function loadDB() {
+  let data = null;
+  try {
+    const raw = await idb('readonly', s => s.get('db'));
+    if (raw) data = typeof raw === 'string' ? JSON.parse(raw) : raw;
+  } catch (e) { /* ignore */ }
+  if (!data) {
+    try { const raw = localStorage.getItem(LS_KEY); if (raw) data = JSON.parse(raw); } catch (e) { /* ignore */ }
+  }
+  DB = migrate(data) || freshDB();
+  return DB;
+}
+
+function migrate(data) {
+  if (!data || typeof data !== 'object' || !data.entries) return null;
+  const base = freshDB();
+  const db = Object.assign(base, data);
+  db.schemaVersion = SCHEMA_VERSION;
+  db.tags = Object.assign({}, base.tags, data.tags || {});
+  db.settings = Object.assign({}, base.settings, data.settings || {});
+  // normalise chaque entrée sur le schéma courant
+  const norm = {};
+  for (const [date, e] of Object.entries(db.entries)) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) continue;
+    const t = emptyEntry(date);
+    deepMerge(t, e);
+    t.date = date;
+    norm[date] = t;
+  }
+  db.entries = norm;
+  return db;
+}
+
+function deepMerge(target, src) {
+  if (!src || typeof src !== 'object') return target;
+  for (const k of Object.keys(target)) {
+    if (!(k in src)) continue;
+    const a = target[k], b = src[k];
+    if (Array.isArray(a)) target[k] = Array.isArray(b) ? b.slice() : a;
+    else if (a && typeof a === 'object') deepMerge(a, b);
+    else if (b !== undefined) target[k] = b;
+  }
+  return target;
+}
+
+let saveTimer = null;
+function persist(immediate) {
+  clearTimeout(saveTimer);
+  const doIt = () => {
+    const json = JSON.stringify(DB);
+    try { localStorage.setItem(LS_KEY, json); } catch (e) { /* quota */ }
+    idb('readwrite', s => s.put(json, 'db'));
+  };
+  if (immediate) doIt(); else saveTimer = setTimeout(doIt, 300);
+}
+
+/* ---------- accès aux entrées ---------- */
+function getEntry(date) { return DB.entries[date] || null; }
+function ensureEntry(date) {
+  if (!DB.entries[date]) DB.entries[date] = emptyEntry(date);
+  return DB.entries[date];
+}
+function isBlank(e) {
+  if (!e) return true;
+  if (e.steps != null || e.stress != null) return false;
+  if (e.mood.score != null || e.mood.note) return false;
+  if (e.sleep.hours != null || e.sleep.quality != null || e.sleep.pain || e.sleep.numbness) return false;
+  if (e.symptoms.tags.length || e.symptoms.note) return false;
+  if (e.activity.tags.length || e.activity.note || e.activity.minutes != null) return false;
+  for (const m of MEALS) { const x = e.meals[m.key]; if (x.text || x.tags.length) return false; }
+  return true;
+}
+function pruneIfBlank(date) {
+  const e = DB.entries[date];
+  if (e && isBlank(e)) delete DB.entries[date];
+}
+/** Nombre de champs majeurs renseignés (0-7) — sert aux pastilles du calendrier. */
+function completeness(e) {
+  if (!e) return 0;
+  let n = 0;
+  if (MEALS.some(m => e.meals[m.key].text || e.meals[m.key].tags.length)) n++;
+  if (e.steps != null) n++;
+  if (e.activity.tags.length || e.activity.minutes != null || e.activity.note) n++;
+  if (e.sleep.hours != null || e.sleep.quality != null) n++;
+  if (e.symptoms.tags.length || e.symptoms.note) n++;
+  if (e.stress != null) n++;
+  if (e.mood.score != null) n++;
+  return n;
+}
+
+/* ---------- dates ---------- */
+const MONTHS = ['janvier', 'février', 'mars', 'avril', 'mai', 'juin', 'juillet', 'août', 'septembre', 'octobre', 'novembre', 'décembre'];
+const DAYS = ['dimanche', 'lundi', 'mardi', 'mercredi', 'jeudi', 'vendredi', 'samedi'];
+
+function iso(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+function parseISO(s) { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); }
+function todayISO() { return iso(new Date()); }
+function addDays(isoStr, n) { const d = parseISO(isoStr); d.setDate(d.getDate() + n); return iso(d); }
+function longDate(isoStr) {
+  const d = parseISO(isoStr);
+  const t = todayISO();
+  if (isoStr === t) return "Aujourd'hui";
+  if (isoStr === addDays(t, -1)) return 'Hier';
+  if (isoStr === addDays(t, 1)) return 'Demain';
+  return `${DAYS[d.getDay()]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
+}
+function shortDate(isoStr) { const d = parseISO(isoStr); return `${d.getDate()}/${String(d.getMonth() + 1).padStart(2, '0')}`; }
+
+/* ---------- utilitaires DOM ---------- */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+function el(tag, attrs, children) {
+  const n = document.createElement(tag);
+  if (attrs) for (const [k, v] of Object.entries(attrs)) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === 'class') n.className = v;
+    else if (k === 'html') n.innerHTML = v;
+    else if (k === 'text') n.textContent = v;
+    else if (k.startsWith('on')) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v === true ? '' : v);
+  }
+  if (children) (Array.isArray(children) ? children : [children]).forEach(c => { if (c) n.appendChild(typeof c === 'string' ? document.createTextNode(c) : c); });
+  return n;
+}
+let toastTimer;
+function toast(msg) {
+  const t = $('#toast');
+  t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 2400);
+}
+function confirmDlg(title, text, okLabel) {
+  return new Promise(resolve => {
+    const dlg = $('#confirm-dlg');
+    $('#cf-title').textContent = title; $('#cf-text').textContent = text; $('#cf-ok').textContent = okLabel;
+    const done = v => { dlg.close(); $('#cf-ok').onclick = null; $('#cf-cancel').onclick = null; resolve(v); };
+    $('#cf-ok').onclick = () => done(true);
+    $('#cf-cancel').onclick = () => done(false);
+    dlg.showModal();
+  });
+}
+/** Saisie de texte en fenêtre modale : `prompt()` est bloqué dans certains
+ *  contextes (iframe en bac à sable, app installée sur iOS). */
+function promptDlg(title, placeholder, okLabel) {
+  return new Promise(resolve => {
+    const dlg = $('#prompt-dlg'), form = $('#prompt-form'), input = $('#pr-input');
+    $('#pr-title').textContent = title;
+    $('#pr-ok').textContent = okLabel || 'Ajouter';
+    input.placeholder = placeholder || '';
+    input.value = '';
+    let done = false;
+    const finish = v => {
+      if (done) return;
+      done = true;
+      form.onsubmit = null; $('#pr-cancel').onclick = null; dlg.onclose = null;
+      if (dlg.open) dlg.close();
+      resolve(v);
+    };
+    form.onsubmit = ev => { ev.preventDefault(); finish(input.value.trim() || null); };
+    $('#pr-cancel').onclick = () => finish(null);
+    dlg.onclose = () => finish(null); // touche Échap / geste de fermeture
+    dlg.showModal();
+    setTimeout(() => { try { input.focus(); } catch (e) { } }, 60);
+  });
+}
+function haptic() { if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} } }
+
+
+/* =======================================================================
+   Wellio — écran Journal : calendrier + saisie du jour
+   ======================================================================= */
+
+let selDate = todayISO();
+let calMonth = null; // {y, m}
+
+/* ---------- Calendrier ---------- */
+function renderCalendar() {
+  const grid = $('#cal-grid');
+  const { y, m } = calMonth;
+  $('#cal-title').textContent = `${MONTHS[m]} ${y}`;
+
+  const first = new Date(y, m, 1);
+  const startOffset = (first.getDay() + 6) % 7; // lundi = 0
+  const start = new Date(y, m, 1 - startOffset);
+  const today = todayISO();
+  const frag = document.createDocumentFragment();
+
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const ds = iso(d);
+    const e = getEntry(ds);
+    const n = completeness(e);
+    const cls = ['day'];
+    if (d.getMonth() !== m) cls.push('out');
+    if (ds === today) cls.push('today');
+    if (ds === selDate) cls.push('sel');
+    if (ds > today) cls.push('future');
+
+    const dots = el('div', { class: 'dots' });
+    if (n > 0) {
+      const lvl = n >= 6 ? 3 : n >= 3 ? 2 : 1;
+      for (let k = 0; k < lvl; k++) dots.appendChild(el('span', { class: 'dot filled' }));
+    }
+    if (e && e.symptoms.tags.length) dots.appendChild(el('span', { class: 'dot sym' }));
+
+    frag.appendChild(el('button', {
+      class: cls.join(' '), 'data-date': ds, type: 'button',
+      'aria-label': longDate(ds), onclick: () => selectDate(ds)
+    }, [el('span', { class: 'num', text: String(d.getDate()) }), dots]));
+  }
+  grid.replaceChildren(frag);
+}
+
+function selectDate(ds) {
+  selDate = ds;
+  const d = parseISO(ds);
+  if (!calMonth || calMonth.y !== d.getFullYear() || calMonth.m !== d.getMonth()) calMonth = { y: d.getFullYear(), m: d.getMonth() };
+  renderCalendar();
+  renderDay();
+  haptic();
+  $('#day-scroll').scrollTop = 0;
+}
+
+function shiftMonth(delta) {
+  const d = new Date(calMonth.y, calMonth.m + delta, 1);
+  calMonth = { y: d.getFullYear(), m: d.getMonth() };
+  renderCalendar();
+}
+
+/* ---------- Chips de tags ---------- */
+function renderChips(container, kind, selected, onChange, tone, sortSelectedFirst) {
+  const box = typeof container === 'string' ? $(container) : container;
+  const list = DB.tags[kind] || [];
+  const extra = selected.filter(t => !list.includes(t));
+  let all = [...list, ...extra];
+  // au premier affichage d'un jour, les tags choisis remontent en tête (utile
+  // dans les rangées défilantes) ; ensuite l'ordre reste stable pendant la saisie
+  if (sortSelectedFirst) all = [...all.filter(t => selected.includes(t)), ...all.filter(t => !selected.includes(t))];
+  const frag = document.createDocumentFragment();
+  all.forEach(tag => {
+    const on = selected.includes(tag);
+    frag.appendChild(el('button', {
+      type: 'button', class: 'chip' + (tone ? ' tone-' + tone : '') + (on ? ' on' : ''), text: tag,
+      onclick: () => {
+        const i = selected.indexOf(tag);
+        if (i >= 0) selected.splice(i, 1); else selected.push(tag);
+        haptic();
+        renderChips(box, kind, selected, onChange, tone);
+        onChange();
+      }
+    }));
+  });
+  frag.appendChild(el('button', {
+    type: 'button', class: 'chip add', text: '+ ajouter',
+    onclick: async () => {
+      const v = await promptDlg('Nouveau tag — ' + (TAG_KIND_LABELS[kind] || kind), 'Nom du tag');
+      if (!v) return;
+      if (!DB.tags[kind].includes(v)) DB.tags[kind].push(v);
+      if (!selected.includes(v)) selected.push(v);
+      haptic();
+      renderChips(box, kind, selected, onChange, tone);
+      onChange();
+    }
+  }));
+  box.replaceChildren(frag);
+}
+
+/* ---------- Formulaire du jour ---------- */
+let flagTimer;
+function touched() {
+  const e = ensureEntry(selDate);
+  e.updatedAt = new Date().toISOString();
+  pruneIfBlank(selDate);
+  persist();
+  renderCalendar();
+  const f = $('#saved-flag');
+  f.classList.add('on');
+  clearTimeout(flagTimer); flagTimer = setTimeout(() => f.classList.remove('on'), 1400);
+}
+
+function buildStaticControls() {
+  // Repas
+  const box = $('#meals');
+  box.replaceChildren(...MEALS.map(m => el('div', { class: 'meal' }, [
+    el('h3', {}, [el('span', { text: m.icon }), el('span', { text: m.label })]),
+    el('input', { type: 'text', id: 'f-meal-' + m.key, placeholder: 'Ce que tu as mangé…' }),
+    el('div', { class: 'chips chips-scroll', id: 'tags-meal-' + m.key, style: 'margin-top:8px' })
+  ])));
+
+  // Qualité de sommeil
+  $('#f-sleep-q').replaceChildren(...SLEEP_Q.map(q => el('button', {
+    type: 'button', 'data-v': q.v, 'aria-pressed': 'false', text: String(q.v),
+    title: q.l, 'aria-label': q.l
+  })));
+  // Humeur
+  $('#f-mood').replaceChildren(...MOODS.map(q => el('button', {
+    type: 'button', 'data-v': q.v, 'aria-pressed': 'false', text: q.e,
+    title: q.l, 'aria-label': q.l
+  })));
+}
+
+function bindForm() {
+  const E = () => ensureEntry(selDate);
+
+  // Repas : texte
+  MEALS.forEach(m => {
+    $('#f-meal-' + m.key).addEventListener('input', ev => { E().meals[m.key].text = ev.target.value; touched(); });
+  });
+
+  // Pas
+  const steps = $('#f-steps');
+  steps.addEventListener('input', ev => {
+    const v = ev.target.value === '' ? null : Math.max(0, Math.min(100000, parseInt(ev.target.value, 10) || 0));
+    E().steps = v; touched();
+  });
+  $$('[data-steps]').forEach(b => b.addEventListener('click', () => {
+    const cur = E().steps || 0;
+    const v = Math.max(0, cur + parseInt(b.dataset.steps, 10));
+    E().steps = v; steps.value = v; haptic(); touched();
+  }));
+
+  // Durée d'activité
+  const am = $('#f-actmin');
+  am.addEventListener('input', ev => {
+    const v = parseInt(ev.target.value, 10);
+    E().activity.minutes = v; $('#o-actmin').textContent = fmtMin(v); touched();
+  });
+  $('#f-activity-note').addEventListener('input', ev => { E().activity.note = ev.target.value; touched(); });
+
+  // Sommeil
+  const sh = $('#f-sleep-h');
+  sh.addEventListener('input', ev => {
+    const v = parseFloat(ev.target.value);
+    E().sleep.hours = v; $('#o-sleep-h').textContent = fmtHours(v); touched();
+  });
+  $('#f-sleep-q').addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-v]'); if (!b) return;
+    const v = parseInt(b.dataset.v, 10);
+    const e = E();
+    e.sleep.quality = e.sleep.quality === v ? null : v;
+    haptic(); syncSeg('#f-sleep-q', e.sleep.quality); touched();
+  });
+  $('#f-pain').addEventListener('click', () => {
+    const e = E(); e.sleep.pain = !e.sleep.pain;
+    if (!e.sleep.pain) { e.sleep.painTags.length = 0; e.sleep.painNote = ''; $('#f-pain-note').value = ''; }
+    haptic(); renderDay(); touched();
+  });
+  $('#f-numb').addEventListener('click', () => {
+    const e = E(); e.sleep.numbness = !e.sleep.numbness;
+    if (!e.sleep.numbness) { e.sleep.numbTags.length = 0; e.sleep.numbNote = ''; $('#f-numb-note').value = ''; }
+    haptic(); renderDay(); touched();
+  });
+  $('#f-pain-note').addEventListener('input', ev => { E().sleep.painNote = ev.target.value; touched(); });
+  $('#f-numb-note').addEventListener('input', ev => { E().sleep.numbNote = ev.target.value; touched(); });
+
+  // Symptômes
+  $('#f-symptom-note').addEventListener('input', ev => { E().symptoms.note = ev.target.value; touched(); });
+
+  // Stress
+  $('#f-stress').addEventListener('input', ev => {
+    const v = parseInt(ev.target.value, 10);
+    E().stress = v; $('#o-stress').textContent = v + '/10'; touched();
+  });
+  // Humeur
+  $('#f-mood').addEventListener('click', ev => {
+    const b = ev.target.closest('button[data-v]'); if (!b) return;
+    const v = parseInt(b.dataset.v, 10);
+    const e = E();
+    e.mood.score = e.mood.score === v ? null : v;
+    haptic(); syncSeg('#f-mood', e.mood.score); touched();
+  });
+  $('#f-mood-note').addEventListener('input', ev => { E().mood.note = ev.target.value; touched(); });
+
+  // Effacer le jour
+  $('#btn-clear-day').addEventListener('click', async () => {
+    if (!getEntry(selDate)) return;
+    const ok = await confirmDlg('Effacer ce jour ?', `Toutes les données du ${longDate(selDate).toLowerCase()} seront supprimées.`, 'Effacer');
+    if (!ok) return;
+    delete DB.entries[selDate];
+    persist(true); renderDay(); renderCalendar(); toast('Journée effacée');
+  });
+
+  // Navigation calendrier
+  $('#prev-month').addEventListener('click', () => shiftMonth(-1));
+  $('#next-month').addEventListener('click', () => shiftMonth(1));
+  $('#btn-today').addEventListener('click', () => selectDate(todayISO()));
+
+  // Swipe horizontal sur le calendrier
+  let x0 = null, y0 = null;
+  const cw = document.querySelector('.cal-wrap');
+  cw.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; y0 = e.touches[0].clientY; }, { passive: true });
+  cw.addEventListener('touchend', e => {
+    if (x0 === null) return;
+    const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) shiftMonth(dx < 0 ? 1 : -1);
+    x0 = null;
+  }, { passive: true });
+}
+
+function fmtHours(v) {
+  if (v === null || v === undefined) return '—';
+  const h = Math.floor(v), m = Math.round((v - h) * 60);
+  return m ? `${h}h${String(m).padStart(2, '0')}` : `${h}h`;
+}
+function fmtMin(v) {
+  if (v === null || v === undefined) return '—';
+  if (v === 0) return '0 min';
+  return v >= 60 ? `${Math.floor(v / 60)}h${v % 60 ? String(v % 60).padStart(2, '0') : ''}` : `${v} min`;
+}
+function syncSeg(sel, value) {
+  $$(sel + ' button[data-v]').forEach(b => b.setAttribute('aria-pressed', String(parseInt(b.dataset.v, 10) === value)));
+}
+
+function renderDay() {
+  const e = getEntry(selDate) || emptyEntry(selDate);
+  $('#day-title').textContent = longDate(selDate);
+
+  MEALS.forEach(m => {
+    $('#f-meal-' + m.key).value = e.meals[m.key].text || '';
+    renderChips('#tags-meal-' + m.key, 'food', ensureEntry(selDate).meals[m.key].tags, touched, 'food', true);
+  });
+
+  $('#f-steps').value = e.steps == null ? '' : e.steps;
+  renderChips('#tags-activity', 'activity', ensureEntry(selDate).activity.tags, touched, 'act');
+  $('#f-actmin').value = e.activity.minutes == null ? 0 : e.activity.minutes;
+  $('#o-actmin').textContent = fmtMin(e.activity.minutes);
+  $('#f-activity-note').value = e.activity.note || '';
+
+  $('#f-sleep-h').value = e.sleep.hours == null ? 7 : e.sleep.hours;
+  $('#o-sleep-h').textContent = fmtHours(e.sleep.hours);
+  syncSeg('#f-sleep-q', e.sleep.quality);
+
+  $('#f-pain').setAttribute('aria-pressed', String(!!e.sleep.pain));
+  $('#pain-details').hidden = !e.sleep.pain;
+  if (e.sleep.pain) {
+    renderChips('#tags-pain', 'pain', ensureEntry(selDate).sleep.painTags, touched, 'sym');
+    $('#f-pain-note').value = e.sleep.painNote || '';
+  }
+  $('#f-numb').setAttribute('aria-pressed', String(!!e.sleep.numbness));
+  $('#numb-details').hidden = !e.sleep.numbness;
+  if (e.sleep.numbness) {
+    renderChips('#tags-numb', 'numb', ensureEntry(selDate).sleep.numbTags, touched, 'sym');
+    $('#f-numb-note').value = e.sleep.numbNote || '';
+  }
+
+  renderChips('#tags-symptom', 'symptom', ensureEntry(selDate).symptoms.tags, touched, 'sym');
+  $('#f-symptom-note').value = e.symptoms.note || '';
+
+  $('#f-stress').value = e.stress == null ? 5 : e.stress;
+  $('#o-stress').textContent = e.stress == null ? '—' : e.stress + '/10';
+  syncSeg('#f-mood', e.mood.score);
+  $('#f-mood-note').value = e.mood.note || '';
+
+  // une entrée vide créée par ensureEntry ne doit pas rester en base
+  pruneIfBlank(selDate);
+}
+
+
+/* =======================================================================
+   Wellio — écran Statistiques (orienté corrélations)
+   ======================================================================= */
+
+const hasSleep = e => e.sleep.hours != null || e.sleep.quality != null || e.sleep.pain || e.sleep.numbness;
+
+const VARS = [
+  { key: 'sleepHours', label: 'Sommeil (h)', short: 'Sommeil', subj: 'le sommeil', unit: 'h', dec: 1, get: e => e.sleep.hours },
+  { key: 'sleepQuality', label: 'Qualité du sommeil', short: 'Qualité sommeil', subj: 'la qualité du sommeil', unit: '/5', dec: 1, get: e => e.sleep.quality },
+  { key: 'steps', label: 'Nombre de pas', short: 'Pas', subj: 'le nombre de pas', unit: '', dec: 0, get: e => e.steps },
+  { key: 'activityMin', label: "Durée d'activité (min)", short: 'Activité', subj: "la durée d'activité", unit: ' min', dec: 0, get: e => e.activity.minutes },
+  { key: 'stress', label: 'Niveau de stress', short: 'Stress', subj: 'le stress', unit: '/10', dec: 1, get: e => e.stress },
+  { key: 'mood', label: 'Humeur', short: 'Humeur', subj: "l'humeur", unit: '/5', dec: 1, get: e => e.mood.score },
+  { key: 'symptomCount', label: 'Nombre de symptômes', short: 'Symptômes', subj: 'le nombre de symptômes', unit: '', dec: 1, get: e => completeness(e) > 0 ? e.symptoms.tags.length : null },
+  {
+    key: 'pain', label: 'Douleurs nocturnes', short: 'Douleurs', subj: 'les douleurs nocturnes', unit: '', dec: 2, bool: true,
+    cause: 'il y a des douleurs nocturnes', more: 'les douleurs nocturnes sont plus fréquentes', less: 'les douleurs nocturnes sont plus rares',
+    get: e => hasSleep(e) ? (e.sleep.pain ? 1 : 0) : null
+  },
+  {
+    key: 'numbness', label: 'Engourdissements', short: 'Engourdis.', subj: 'les engourdissements', unit: '', dec: 2, bool: true,
+    cause: 'il y a des engourdissements', more: 'les engourdissements sont plus fréquents', less: 'les engourdissements sont plus rares',
+    get: e => hasSleep(e) ? (e.sleep.numbness ? 1 : 0) : null
+  }
+];
+/** « Quand le sommeil augmente » / « Quand il y a des douleurs nocturnes ». */
+const causePhrase = V => V.bool ? V.cause : `${V.subj} augmente`;
+/** « le stress a tendance à diminuer » / « les douleurs sont plus fréquentes ». */
+const effectPhrase = (V, r) => V.bool ? (r > 0 ? V.more : V.less) : `${V.subj} a tendance à ${r > 0 ? 'augmenter' : 'diminuer'}`;
+const VAR_BY_KEY = Object.fromEntries(VARS.map(v => [v.key, v]));
+
+let period = 90;
+let lag = 0;
+let varX = 'sleepHours', varY = 'symptomCount';
+let tagTarget = 'symptomCount';
+
+/* ---------- séries ---------- */
+function datesInPeriod() {
+  const all = Object.keys(DB.entries).sort();
+  if (!period) return all;
+  const min = addDays(todayISO(), -(period - 1));
+  return all.filter(d => d >= min);
+}
+function valueOn(date, key) {
+  const e = DB.entries[date];
+  if (!e) return null;
+  const v = VAR_BY_KEY[key].get(e);
+  return (v === null || v === undefined || Number.isNaN(v)) ? null : Number(v);
+}
+/** Paires (x du jour J, y du jour J+lag) disponibles. */
+function pairs(xKey, yKey, lagDays) {
+  const out = [];
+  for (const d of datesInPeriod()) {
+    const x = valueOn(d, xKey);
+    if (x === null) continue;
+    const d2 = lagDays ? addDays(d, lagDays) : d;
+    const y = valueOn(d2, yKey);
+    if (y === null) continue;
+    out.push({ x, y, date: d, date2: d2 });
+  }
+  return out;
+}
+
+/* ---------- statistiques ---------- */
+function mean(a) { return a.length ? a.reduce((s, v) => s + v, 0) / a.length : null; }
+function sd(a) {
+  if (a.length < 2) return 0;
+  const m = mean(a);
+  return Math.sqrt(a.reduce((s, v) => s + (v - m) ** 2, 0) / (a.length - 1));
+}
+function pearson(pts) {
+  const n = pts.length;
+  if (n < 3) return null;
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const mx = mean(xs), my = mean(ys);
+  let num = 0, dx = 0, dy = 0;
+  for (let i = 0; i < n; i++) { const a = xs[i] - mx, b = ys[i] - my; num += a * b; dx += a * a; dy += b * b; }
+  if (dx === 0 || dy === 0) return null;
+  const r = num / Math.sqrt(dx * dy);
+  return { r, n, p: pValue(r, n), mx, my, slope: num / dx };
+}
+/** Fonction d'erreur — approximation d'Abramowitz & Stegun 7.1.26. */
+function erf(x) {
+  const s = x < 0 ? -1 : 1; x = Math.abs(x);
+  const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741, a4 = -1.453152027, a5 = 1.061405429;
+  const t = 1 / (1 + 0.3275911 * x);
+  const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+  return s * y;
+}
+/** p bilatéral via la transformation z de Fisher (approximation suffisante ici). */
+function pValue(r, n) {
+  if (n < 5 || Math.abs(r) >= 0.999) return 0;
+  const z = Math.atanh(r) * Math.sqrt(n - 3);
+  return 2 * (1 - 0.5 * (1 + erf(Math.abs(z) / Math.SQRT2)));
+}
+function strengthLabel(r) {
+  const a = Math.abs(r);
+  if (a >= 0.6) return 'lien fort';
+  if (a >= 0.4) return 'lien net';
+  if (a >= 0.25) return 'lien léger';
+  return 'lien faible';
+}
+function corrColor(r) {
+  const a = Math.min(1, Math.abs(r) / 0.8);
+  const light = document.documentElement.getAttribute('data-theme') === 'dark' ? false : !matchMedia('(prefers-color-scheme: dark)').matches;
+  const pos = light ? [42, 120, 214] : [57, 135, 229];
+  const neg = light ? [208, 59, 59] : [230, 103, 103];
+  const c = r >= 0 ? pos : neg;
+  const alpha = 0.35 + 0.65 * a;
+  return `rgba(${c[0]},${c[1]},${c[2]},${alpha.toFixed(2)})`;
+}
+/** Graduations « rondes » (1, 2, 2,5, 5, 10 × 10^k) dans l'intervalle donné. */
+function niceTicks(lo, hi, count) {
+  if (hi <= lo) return [lo];
+  const raw = (hi - lo) / Math.max(1, count - 1);
+  const mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const norm = raw / mag;
+  const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 2.5 ? 2.5 : norm <= 5 ? 5 : 10) * mag;
+  const out = [];
+  for (let v = Math.ceil(lo / step) * step; v <= hi + step * 1e-9; v += step) out.push(Math.round(v / step) * step);
+  return out.length >= 2 ? out : [lo, hi];
+}
+function tickLabel(V, v) {
+  if (V.bool) return v > 0.5 ? 'oui' : 'non';
+  if (V.key === 'steps') return Math.abs(v) >= 1000 ? (v / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + 'k' : String(Math.round(v));
+  let r = Math.round(v * 100) / 100;
+  if (r === 0) r = 0; // évite « -0 »
+  return r.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+}
+/** Dispersion à appliquer quand les valeurs sont discrètes (sinon les points se superposent). */
+function jitterAmp(vals) {
+  const uniq = [...new Set(vals)].sort((a, b) => a - b);
+  if (uniq.length > 12 || uniq.length < 2) return 0;
+  let minGap = Infinity;
+  for (let i = 1; i < uniq.length; i++) minGap = Math.min(minGap, uniq[i] - uniq[i - 1]);
+  return minGap * 0.4;
+}
+/** Générateur pseudo-aléatoire déterministe : le nuage ne bouge pas d'un rendu à l'autre. */
+function mulberry(a) {
+  return function () {
+    a |= 0; a = a + 0x6D2B79F5 | 0;
+    let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
+    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+  };
+}
+
+function fmtVal(key, v) {
+  if (v === null || v === undefined) return '—';
+  const V = VAR_BY_KEY[key];
+  if (V.bool) return Math.round(v * 100) + ' %';
+  if (key === 'steps') return Math.round(v).toLocaleString('fr-FR');
+  if (key === 'sleepHours') return fmtHours(Math.round(v * 4) / 4);
+  return v.toFixed(V.dec) + V.unit;
+}
+
+/* ---------- rendu ---------- */
+function renderStats() {
+  const dates = datesInPeriod();
+  renderKpis(dates);
+  renderTopCorrelations();
+  renderScatter();
+  renderTagEffects();
+  renderWeekly();
+}
+
+function renderKpis(dates) {
+  const filled = dates.filter(d => completeness(DB.entries[d]) > 0);
+  const avg = key => {
+    const vals = dates.map(d => valueOn(d, key)).filter(v => v !== null);
+    return vals.length ? mean(vals) : null;
+  };
+  const items = [
+    { k: 'Jours renseignés', v: String(filled.length), s: period ? `sur ${period} j` : '' },
+    { k: 'Sommeil moyen', v: avg('sleepHours') === null ? '—' : fmtHours(Math.round(avg('sleepHours') * 4) / 4), s: '' },
+    { k: 'Pas / jour', v: avg('steps') === null ? '—' : Math.round(avg('steps')).toLocaleString('fr-FR'), s: '' },
+    { k: 'Stress moyen', v: avg('stress') === null ? '—' : avg('stress').toFixed(1), s: '/10' }
+  ];
+  $('#kpis').replaceChildren(...items.map(i => el('div', { class: 'kpi' }, [
+    el('div', { class: 'v' }, [document.createTextNode(i.v), i.s ? el('small', { text: ' ' + i.s }) : null]),
+    el('div', { class: 'k', text: i.k })
+  ])));
+}
+
+function renderTopCorrelations() {
+  const box = $('#corr-top');
+  const found = [];
+  for (const L of [0, 1]) {
+    for (let i = 0; i < VARS.length; i++) {
+      for (let j = 0; j < VARS.length; j++) {
+        if (i === j) continue;
+        if (L === 0 && j < i) continue; // symétrique
+        const res = pearson(pairs(VARS[i].key, VARS[j].key, L));
+        if (!res || res.n < 7) continue;
+        if (Math.abs(res.r) < 0.25) continue;
+        found.push({ x: VARS[i], y: VARS[j], lag: L, ...res });
+      }
+    }
+  }
+  found.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
+  const top = found.slice(0, 8);
+
+  if (!top.length) {
+    box.replaceChildren(el('div', { class: 'empty' }, [
+      el('span', { class: 'big', text: '🔍' }),
+      document.createTextNode('Pas encore assez de données. Il faut au moins 7 jours comparables pour qu\'une corrélation devienne lisible — continue à remplir le journal.')
+    ]));
+    return;
+  }
+  box.replaceChildren(...top.map(c => {
+    const when = c.lag ? ' le lendemain' : '';
+    const fiab = c.p < 0.01 ? 'signal net' : c.p < 0.05 ? 'signal probable' : 'à confirmer';
+    return el('button', {
+      class: 'corr-item', type: 'button', style: 'width:100%;text-align:left',
+      onclick: () => { varX = c.x.key; varY = c.y.key; lag = c.lag; syncStatControls(); renderScatter(); $('#scatter-box').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+    }, [
+      el('span', { class: 'rbadge', text: (c.r > 0 ? '+' : '') + c.r.toFixed(2), style: `background:${corrColor(c.r)}` }),
+      el('span', { class: 'txt' }, [
+        document.createTextNode(`Quand ${causePhrase(c.x)}, ${effectPhrase(c.y, c.r)}${when}.`),
+        el('small', { text: `${strengthLabel(c.r)} · ${c.n} jours comparés · ${fiab}` })
+      ])
+    ]);
+  }));
+}
+
+function syncStatControls() {
+  $('#var-x').value = varX; $('#var-y').value = varY;
+  $$('#lag-seg button').forEach(b => b.setAttribute('aria-pressed', String(parseInt(b.dataset.lag, 10) === lag)));
+}
+
+function renderScatter() {
+  const box = $('#scatter-box');
+  const X = VAR_BY_KEY[varX], Y = VAR_BY_KEY[varY];
+  const pts = pairs(varX, varY, lag);
+  const res = pearson(pts);
+  if (pts.length < 3) {
+    box.replaceChildren(el('div', { class: 'empty' }, [el('span', { class: 'big', text: '📉' }), document.createTextNode('Pas assez de jours où ces deux champs sont renseignés ensemble.')]));
+    return;
+  }
+  const W = 320, H = 210, ml = 40, mr = 8, mt = 10, mb = 28;
+  const pw = W - ml - mr, ph = H - mt - mb;
+  const xs = pts.map(p => p.x), ys = pts.map(p => p.y);
+  const pad = (a) => { let lo = Math.min(...a), hi = Math.max(...a); if (lo === hi) { lo -= 1; hi += 1; } const d = (hi - lo) * 0.08; return [lo - d, hi + d]; };
+  const [x0, x1] = pad(xs), [y0, y1] = pad(ys);
+  const sx = v => ml + (v - x0) / (x1 - x0) * pw;
+  const sy = v => mt + ph - (v - y0) / (y1 - y0) * ph;
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(ns, 'svg');
+  svg.setAttribute('viewBox', `0 0 ${W} ${H}`); svg.setAttribute('class', 'chart'); svg.setAttribute('role', 'img');
+  svg.setAttribute('aria-label', `Nuage de points : ${X.label} en abscisse, ${Y.label} en ordonnée`);
+  const mk = (t, a) => { const n = document.createElementNS(ns, t); for (const [k, v] of Object.entries(a)) n.setAttribute(k, v); return n; };
+
+  // grille + graduations (pas « ronds »)
+  const yTicks = Y.bool ? [0, 1] : niceTicks(y0, y1, 5);
+  yTicks.forEach(v => {
+    const yy = sy(v);
+    if (yy < mt - 1 || yy > mt + ph + 1) return;
+    svg.appendChild(mk('line', { class: 'grid-line', x1: ml, x2: W - mr, y1: yy, y2: yy }));
+    const t = mk('text', { x: ml - 6, y: yy + 3.5, 'text-anchor': 'end' });
+    t.textContent = tickLabel(Y, v);
+    svg.appendChild(t);
+  });
+  const xTicks = X.bool ? [0, 1] : niceTicks(x0, x1, 4);
+  xTicks.forEach((v, i) => {
+    const xx = sx(v);
+    if (xx < ml - 1 || xx > W - mr + 1) return;
+    const t = mk('text', { x: xx, y: H - 12, 'text-anchor': 'middle' });
+    t.textContent = tickLabel(X, v);
+    svg.appendChild(t);
+  });
+  svg.appendChild(mk('line', { class: 'axis', x1: ml, x2: ml, y1: mt, y2: mt + ph }));
+  svg.appendChild(mk('line', { class: 'axis', x1: ml, x2: W - mr, y1: mt + ph, y2: mt + ph }));
+
+  // droite de régression
+  if (res) {
+    const a = res.slope, b = res.my - a * res.mx;
+    const lx0 = Math.max(x0, Math.min(...xs)), lx1 = Math.min(x1, Math.max(...xs));
+    svg.appendChild(mk('line', {
+      x1: sx(lx0), y1: sy(a * lx0 + b), x2: sx(lx1), y2: sy(a * lx1 + b),
+      stroke: corrColor(res.r), 'stroke-width': 2, 'stroke-linecap': 'round'
+    }));
+  }
+  // points (anneau de surface 2px pour la lisibilité des superpositions)
+  const jx = jitterAmp(xs), jy = jitterAmp(ys);
+  const rand = mulberry(pts.length * 7 + 13);
+  pts.forEach(p => {
+    const c = mk('circle', {
+      cx: sx(p.x + (rand() - 0.5) * jx), cy: sy(p.y + (rand() - 0.5) * jy), r: 4.5,
+      fill: 'var(--s1)', 'fill-opacity': 0.75, stroke: 'var(--surface)', 'stroke-width': 2
+    });
+    const ti = document.createElementNS(ns, 'title');
+    ti.textContent = `${shortDate(p.date)} · ${X.short} ${fmtVal(varX, p.x)} → ${Y.short} ${fmtVal(varY, p.y)}`;
+    c.appendChild(ti);
+    svg.appendChild(c);
+  });
+
+  const caption = res
+    ? el('p', { class: 'hint', style: 'margin-top:4px' }, [
+      el('strong', { text: `r = ${res.r >= 0 ? '+' : ''}${res.r.toFixed(2)}` }),
+      document.createTextNode(` · ${strengthLabel(res.r)} · ${res.n} jours · ${res.p < 0.05 ? 'peu probable au hasard' : 'peut être dû au hasard'}`)
+    ])
+    : el('p', { class: 'hint', text: 'Variation insuffisante pour calculer une corrélation.' });
+
+  box.replaceChildren(
+    el('p', { class: 'hint', style: 'margin:0 0 6px', text: `${Y.label} (vertical) selon ${X.label} (horizontal)${lag ? ' — mesuré le lendemain' : ''}` }),
+    svg, caption
+  );
+}
+
+/* ---------- effet des tags ---------- */
+function allTagsUsed() {
+  const counts = new Map();
+  for (const d of datesInPeriod()) {
+    const e = DB.entries[d]; if (!e) continue;
+    const set = new Set();
+    MEALS.forEach(m => e.meals[m.key].tags.forEach(t => set.add('🍽 ' + t)));
+    e.activity.tags.forEach(t => set.add('🚶 ' + t));
+    e.symptoms.tags.forEach(t => set.add('🩺 ' + t));
+    for (const t of set) {
+      if (!counts.has(t)) counts.set(t, []);
+      counts.get(t).push(d);
+    }
+  }
+  return counts;
+}
+
+function renderTagEffects() {
+  const box = $('#tag-effects');
+  const counts = allTagsUsed();
+  const target = tagTarget;
+  const rows = [];
+  const allDates = datesInPeriod();
+
+  for (const [tag, days] of counts) {
+    if (days.length < 4) continue;
+    const dset = new Set(days);
+    for (const L of [0, 1]) {
+      // un tag de symptôme comparé au nombre de symptômes du même jour ne dit rien
+      if (L === 0 && target === 'symptomCount' && tag.startsWith('🩺')) continue;
+      const withV = [], withoutV = [];
+      for (const d of allDates) {
+        const ref = L ? addDays(d, -L) : d; // le jour du tag
+        const v = valueOn(d, target);
+        if (v === null) continue;
+        (dset.has(ref) ? withV : withoutV).push(v);
+      }
+      if (withV.length < 4 || withoutV.length < 4) continue;
+      const mw = mean(withV), mo = mean(withoutV);
+      rows.push({ tag, lag: L, diff: mw - mo, mw, mo, n: withV.length });
+    }
+  }
+  if (!rows.length) {
+    box.replaceChildren(el('div', { class: 'empty' }, [el('span', { class: 'big', text: '🏷️' }), document.createTextNode("Ajoute des tags à tes repas, activités et symptômes : dès qu'un tag revient 4 fois, son effet apparaît ici.")]));
+    return;
+  }
+  rows.sort((a, b) => Math.abs(b.diff) - Math.abs(a.diff));
+  const top = rows.slice(0, 8);
+  const maxAbs = Math.max(...top.map(r => Math.abs(r.diff)));
+  const T = VAR_BY_KEY[target];
+
+  box.replaceChildren(...top.map(r => {
+    const pct = Math.abs(r.diff) / maxAbs * 100;
+    const sign = r.diff > 0 ? '+' : '';
+    return el('div', { class: 'corr-item' }, [
+      el('span', { class: 'rbadge', text: sign + (T.bool ? Math.round(r.diff * 100) + '%' : r.diff.toFixed(T.dec)), style: `background:${corrColor(r.diff)}` }),
+      el('span', { class: 'txt' }, [
+        document.createTextNode(`${r.tag}${r.lag ? ' → lendemain' : ''}`),
+        el('small', { text: `${T.short} : ${fmtVal(target, r.mw)} avec · ${fmtVal(target, r.mo)} sans · ${r.n} jours` }),
+        el('span', { class: 'bar-track', style: 'margin-top:6px;display:block' }, [
+          el('span', { class: 'bar-fill', style: `width:${pct}%;background:${corrColor(r.diff)}` })
+        ])
+      ])
+    ]);
+  }));
+}
+
+/* ---------- moyennes hebdomadaires ---------- */
+function renderWeekly() {
+  const dates = datesInPeriod();
+  if (!dates.length) { $('#weekly').replaceChildren(el('div', { class: 'empty', text: 'Aucune donnée sur la période.' })); return; }
+  const weeks = new Map();
+  for (const d of dates) {
+    const dt = parseISO(d);
+    const monday = new Date(dt); monday.setDate(dt.getDate() - ((dt.getDay() + 6) % 7));
+    const k = iso(monday);
+    if (!weeks.has(k)) weeks.set(k, []);
+    weeks.get(k).push(d);
+  }
+  const keys = [...weeks.keys()].sort().reverse().slice(0, 8);
+  const cell = (ds, key) => {
+    const vals = ds.map(d => valueOn(d, key)).filter(v => v !== null);
+    return vals.length ? mean(vals) : null;
+  };
+  const head = el('tr', {}, [
+    el('th', { text: 'Semaine' }), el('th', { text: 'Som.' }), el('th', { text: 'Pas' }),
+    el('th', { text: 'Stress' }), el('th', { text: 'Hum.' }), el('th', { text: 'Sympt.' })
+  ]);
+  const body = keys.map(k => {
+    const ds = weeks.get(k);
+    const s = cell(ds, 'sleepHours'), p = cell(ds, 'steps'), st = cell(ds, 'stress'), m = cell(ds, 'mood'), sy = cell(ds, 'symptomCount');
+    return el('tr', {}, [
+      el('td', { text: 'sem. du ' + shortDate(k) }),
+      el('td', { text: s === null ? '—' : (Math.round(s * 10) / 10).toFixed(1) }),
+      el('td', { text: p === null ? '—' : Math.round(p).toLocaleString('fr-FR') }),
+      el('td', { text: st === null ? '—' : st.toFixed(1) }),
+      el('td', { text: m === null ? '—' : m.toFixed(1) }),
+      el('td', { text: sy === null ? '—' : sy.toFixed(1) })
+    ]);
+  });
+  const tbl = el('table', { class: 'tbl' }, [el('thead', {}, head), el('tbody', {}, body)]);
+  $('#weekly').replaceChildren(tbl);
+}
+
+function bindStats() {
+  const opts = sel => VARS.map(v => el('option', { value: v.key, text: v.label }));
+  $('#var-x').replaceChildren(...opts()); $('#var-y').replaceChildren(...opts());
+  $('#tag-target').replaceChildren(...VARS.map(v => el('option', { value: v.key, text: 'Effet sur : ' + v.label.toLowerCase() })));
+  $('#tag-target').value = tagTarget;
+  syncStatControls();
+
+  $('#period').addEventListener('change', e => { period = parseInt(e.target.value, 10); renderStats(); });
+  $('#var-x').addEventListener('change', e => { varX = e.target.value; renderScatter(); });
+  $('#var-y').addEventListener('change', e => { varY = e.target.value; renderScatter(); });
+  $('#lag-seg').addEventListener('click', e => {
+    const b = e.target.closest('button[data-lag]'); if (!b) return;
+    lag = parseInt(b.dataset.lag, 10); syncStatControls(); renderScatter();
+  });
+  $('#tag-target').addEventListener('change', e => { tagTarget = e.target.value; renderTagEffects(); });
+}
+
+
+/* =======================================================================
+   Wellio — écran Données : export, import, tags, maintenance
+   ======================================================================= */
+
+function stamp() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
+}
+
+async function saveFile(filename, mime, content) {
+  if (window.WELLIO_PREVIEW) {
+    toast("Aperçu : les téléchargements sont bloqués ici, l'export marchera sur ta version installée.");
+    return false;
+  }
+  const blob = new Blob([content], { type: mime + ';charset=utf-8' });
+  const file = new File([blob], filename, { type: mime });
+  // Sur iPhone, la feuille de partage permet « Enregistrer dans Fichiers » / iCloud.
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try { await navigator.share({ files: [file], title: filename }); return true; }
+    catch (err) { if (err && err.name === 'AbortError') return false; }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = el('a', { href: url, download: filename });
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+  return true;
+}
+
+/* ---------- export ---------- */
+function exportPayload() {
+  return JSON.stringify({ ...DB, exportedAt: new Date().toISOString(), app: 'wellio', schemaVersion: SCHEMA_VERSION }, null, 2);
+}
+async function exportJSON() {
+  const ok = await saveFile(`wellio-sauvegarde-${stamp()}.json`, 'application/json', exportPayload());
+  if (!ok) return;
+  DB.settings.lastExportAt = new Date().toISOString();
+  persist(true); renderDataScreen();
+  toast('Sauvegarde exportée');
+}
+
+function csvCell(v) {
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  return /[";\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+}
+const CSV_SEP = ';'; // Excel/Numbers en français
+
+function exportCSVWide() {
+  const head = ['date', 'jour_semaine', 'petit_dejeuner', 'petit_dejeuner_tags', 'dejeuner', 'dejeuner_tags',
+    'diner', 'diner_tags', 'bonus', 'bonus_tags', 'pas', 'activites', 'activite_minutes', 'activite_note',
+    'sommeil_heures', 'sommeil_qualite_1_5', 'douleurs', 'douleurs_zones', 'douleurs_note',
+    'engourdissements', 'engourdissements_zones', 'engourdissements_note',
+    'symptomes', 'symptomes_nombre', 'symptomes_note', 'stress_0_10', 'humeur_1_5', 'humeur_note', 'modifie_le'];
+  const lines = [head.join(CSV_SEP)];
+  for (const d of Object.keys(DB.entries).sort()) {
+    const e = DB.entries[d];
+    const m = k => e.meals[k];
+    lines.push([
+      d, DAYS[parseISO(d).getDay()],
+      m('breakfast').text, m('breakfast').tags.join(', '),
+      m('lunch').text, m('lunch').tags.join(', '),
+      m('dinner').text, m('dinner').tags.join(', '),
+      m('bonus').text, m('bonus').tags.join(', '),
+      e.steps, e.activity.tags.join(', '), e.activity.minutes, e.activity.note,
+      e.sleep.hours, e.sleep.quality,
+      e.sleep.pain ? 'oui' : 'non', e.sleep.painTags.join(', '), e.sleep.painNote,
+      e.sleep.numbness ? 'oui' : 'non', e.sleep.numbTags.join(', '), e.sleep.numbNote,
+      e.symptoms.tags.join(', '), e.symptoms.tags.length, e.symptoms.note,
+      e.stress, e.mood.score, e.mood.note, e.updatedAt
+    ].map(csvCell).join(CSV_SEP));
+  }
+  return '﻿' + lines.join('\n');
+}
+
+function exportCSVLong() {
+  const lines = ['date' + CSV_SEP + 'categorie' + CSV_SEP + 'champ' + CSV_SEP + 'valeur'];
+  const push = (d, c, f, v) => { if (v !== null && v !== undefined && v !== '' && v !== false) lines.push([d, c, f, v].map(csvCell).join(CSV_SEP)); };
+  for (const d of Object.keys(DB.entries).sort()) {
+    const e = DB.entries[d];
+    MEALS.forEach(m => {
+      push(d, 'repas', m.key + '_texte', e.meals[m.key].text);
+      e.meals[m.key].tags.forEach(t => push(d, 'repas', m.key + '_tag', t));
+    });
+    push(d, 'activite', 'pas', e.steps);
+    push(d, 'activite', 'minutes', e.activity.minutes);
+    push(d, 'activite', 'note', e.activity.note);
+    e.activity.tags.forEach(t => push(d, 'activite', 'tag', t));
+    push(d, 'sommeil', 'heures', e.sleep.hours);
+    push(d, 'sommeil', 'qualite', e.sleep.quality);
+    push(d, 'sommeil', 'douleurs', e.sleep.pain ? 'oui' : null);
+    e.sleep.painTags.forEach(t => push(d, 'sommeil', 'douleur_zone', t));
+    push(d, 'sommeil', 'douleur_note', e.sleep.painNote);
+    push(d, 'sommeil', 'engourdissements', e.sleep.numbness ? 'oui' : null);
+    e.sleep.numbTags.forEach(t => push(d, 'sommeil', 'engourdissement_zone', t));
+    push(d, 'sommeil', 'engourdissement_note', e.sleep.numbNote);
+    e.symptoms.tags.forEach(t => push(d, 'symptomes', 'tag', t));
+    push(d, 'symptomes', 'note', e.symptoms.note);
+    push(d, 'etat', 'stress', e.stress);
+    push(d, 'etat', 'humeur', e.mood.score);
+    push(d, 'etat', 'humeur_note', e.mood.note);
+  }
+  return '﻿' + lines.join('\n');
+}
+
+/* ---------- import ---------- */
+function validateImport(obj) {
+  if (!obj || typeof obj !== 'object') throw new Error('Fichier illisible.');
+  if (!obj.entries || typeof obj.entries !== 'object') throw new Error('Ce fichier ne contient pas de journal Wellio.');
+  const keys = Object.keys(obj.entries).filter(k => /^\d{4}-\d{2}-\d{2}$/.test(k));
+  if (!keys.length) throw new Error('Aucune journée valide dans ce fichier.');
+  return keys.length;
+}
+
+function applyImport(incoming, mode) {
+  const migrated = migrate(incoming);
+  if (mode === 'replace') {
+    DB = migrated;
+  } else {
+    for (const [d, e] of Object.entries(migrated.entries)) {
+      const cur = DB.entries[d];
+      if (!cur || !cur.updatedAt || (e.updatedAt && e.updatedAt > cur.updatedAt)) DB.entries[d] = e;
+    }
+    for (const kind of Object.keys(DB.tags)) {
+      const add = (migrated.tags[kind] || []).filter(t => !DB.tags[kind].includes(t));
+      DB.tags[kind].push(...add);
+    }
+  }
+  persist(true);
+  selectDate(todayISO());
+  renderStats(); renderDataScreen();
+  toast(mode === 'replace' ? 'Données remplacées' : 'Données fusionnées');
+}
+
+/* ---------- gestion des tags ---------- */
+const TAG_KIND_LABELS = { food: '🍽 Repas', activity: '🚶 Activités', symptom: '🩺 Symptômes', pain: '💢 Zones de douleur', numb: '🌀 Engourdissements' };
+
+function renderTagManager() {
+  const box = $('#tag-manager');
+  const parts = [];
+  for (const [kind, label] of Object.entries(TAG_KIND_LABELS)) {
+    parts.push(el('div', { class: 'field-label', text: label }));
+    const chips = el('div', { class: 'chips' });
+    DB.tags[kind].forEach(t => {
+      chips.appendChild(el('button', {
+        type: 'button', class: 'chip', text: t + '  ×', 'aria-label': 'Supprimer le tag ' + t,
+        onclick: async () => {
+          const ok = await confirmDlg('Supprimer ce tag ?', `« ${t} » disparaîtra de la liste proposée. Les jours déjà enregistrés avec ce tag ne sont pas modifiés.`, 'Supprimer');
+          if (!ok) return;
+          DB.tags[kind] = DB.tags[kind].filter(x => x !== t);
+          persist(true); renderTagManager(); renderDay();
+        }
+      }));
+    });
+    chips.appendChild(el('button', {
+      type: 'button', class: 'chip add', text: '+ ajouter',
+      onclick: async () => {
+        const v = await promptDlg('Nouveau tag — ' + label, 'Nom du tag');
+        if (!v || DB.tags[kind].includes(v)) return;
+        DB.tags[kind].push(v); persist(true); renderTagManager(); renderDay();
+      }
+    }));
+    parts.push(chips);
+  }
+  box.replaceChildren(...parts);
+}
+
+/* ---------- infos & bannière ---------- */
+async function renderDataScreen() {
+  renderTagManager();
+
+  const n = Object.keys(DB.entries).length;
+  const dates = Object.keys(DB.entries).sort();
+  const size = new Blob([JSON.stringify(DB)]).size;
+  let persisted = null;
+  try { if (navigator.storage && navigator.storage.persisted) persisted = await navigator.storage.persisted(); } catch (e) { }
+  const le = DB.settings.lastExportAt ? new Date(DB.settings.lastExportAt) : null;
+
+  $('#storage-info').replaceChildren(
+    el('div', { class: 'row' }, [el('span', { class: 'lbl', text: 'Journées enregistrées' }), el('span', { text: String(n), style: 'font-variant-numeric:tabular-nums' })]),
+    el('div', { class: 'row' }, [el('span', { class: 'lbl', text: 'Période couverte' }), el('span', { text: n ? `${shortDate(dates[0])} → ${shortDate(dates[dates.length - 1])}` : '—' })]),
+    el('div', { class: 'row' }, [el('span', { class: 'lbl', text: 'Taille des données' }), el('span', { text: (size / 1024).toFixed(1) + ' Ko' })]),
+    el('div', { class: 'row' }, [el('span', { class: 'lbl', text: 'Dernière sauvegarde' }), el('span', { text: le ? le.toLocaleDateString('fr-FR') : 'jamais' })]),
+    el('div', { class: 'row' }, [el('span', { class: 'lbl', text: 'Stockage protégé' }), el('span', { text: persisted === null ? 'inconnu' : persisted ? 'oui' : 'non garanti' })]),
+    el('p', { class: 'hint', text: `${APP_NAME} · version ${APP_VERSION} · données stockées uniquement sur cet appareil, aucun compte, aucun serveur.` })
+  );
+
+  // bannière de rappel de sauvegarde
+  const banner = $('#backup-banner');
+  const days = le ? (Date.now() - le.getTime()) / 86400000 : Infinity;
+  if (window.WELLIO_PREVIEW) {
+    banner.replaceChildren(el('div', { class: 'banner' }, [
+      el('span', { text: '👀' }),
+      el('span', { style: 'flex:1' }, [el('strong', { text: 'Aperçu de démonstration. ' }),
+        document.createTextNode("Les 90 jours affichés sont fictifs et l'export de fichiers est bloqué dans cet aperçu. Sur la version installée depuis Vercel, tout fonctionne et le journal démarre vide.")])
+    ]));
+  } else if (n >= 7 && days > 30) {
+    banner.replaceChildren(el('div', { class: 'banner' }, [
+      el('span', { text: '⚠️' }),
+      el('span', { style: 'flex:1' }, [document.createTextNode(le ? `Dernière sauvegarde il y a ${Math.round(days)} jours. ` : 'Aucune sauvegarde pour le moment. '), el('span', { text: 'Exporte le fichier .json pour ne rien perdre.' })]),
+      el('button', { text: 'Exporter', onclick: exportJSON })
+    ]));
+  } else banner.replaceChildren();
+}
+
+function bindData() {
+  $('#btn-export-json').addEventListener('click', exportJSON);
+  $('#btn-export-csv').addEventListener('click', async () => {
+    await saveFile(`wellio-journal-${stamp()}.csv`, 'text/csv', exportCSVWide()); toast('CSV exporté');
+  });
+  $('#btn-export-csv-long').addEventListener('click', async () => {
+    await saveFile(`wellio-journal-detail-${stamp()}.csv`, 'text/csv', exportCSVLong()); toast('CSV détaillé exporté');
+  });
+  $('#btn-import').addEventListener('click', () => $('#file-import').click());
+  $('#file-import').addEventListener('change', async ev => {
+    const f = ev.target.files && ev.target.files[0];
+    ev.target.value = '';
+    if (!f) return;
+    let obj, count;
+    try { obj = JSON.parse(await f.text()); count = validateImport(obj); }
+    catch (err) { toast('Import impossible : ' + (err.message || 'fichier invalide')); return; }
+    const dlg = $('#import-dlg');
+    $('#imp-text').textContent = `${count} journée${count > 1 ? 's' : ''} trouvée${count > 1 ? 's' : ''} dans ce fichier. Tu as ${Object.keys(DB.entries).length} journée(s) sur cet appareil.`;
+    const close = () => { dlg.close(); $('#imp-merge').onclick = $('#imp-replace').onclick = $('#imp-cancel').onclick = null; };
+    $('#imp-merge').onclick = () => { close(); applyImport(obj, 'merge'); };
+    $('#imp-replace').onclick = async () => {
+      close();
+      const ok = await confirmDlg('Remplacer toutes les données ?', 'Le journal actuel de cet appareil sera définitivement supprimé et remplacé par le contenu du fichier.', 'Remplacer');
+      if (ok) applyImport(obj, 'replace');
+    };
+    $('#imp-cancel').onclick = close;
+    dlg.showModal();
+  });
+  $('#btn-wipe').addEventListener('click', async () => {
+    const ok = await confirmDlg('Tout effacer ?', 'Toutes les journées et tous les tags personnalisés seront supprimés de cet appareil. Pense à exporter une sauvegarde avant.', 'Tout effacer');
+    if (!ok) return;
+    DB = freshDB(); persist(true);
+    selectDate(todayISO()); renderStats(); renderDataScreen(); toast('Données effacées');
+  });
+}
+
+/* ---------- navigation ---------- */
+function showScreen(name) {
+  $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'scr-' + name));
+  $$('.tabbar button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.scr === name)));
+  if (name === 'stats') renderStats();
+  if (name === 'data') renderDataScreen();
+  haptic();
+}
+
+/* ---------- démarrage ---------- */
+async function boot() {
+  await loadDB();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) { }
+
+  buildStaticControls();
+  bindForm();
+  bindStats();
+  bindData();
+  $$('.tabbar button').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.scr)));
+
+  const d = parseISO(todayISO());
+  calMonth = { y: d.getFullYear(), m: d.getMonth() };
+  selectDate(todayISO());
+
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') persist(true); });
+  window.addEventListener('pagehide', () => persist(true));
+}
+
+if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+else boot();
+
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('/sw.js').catch(function () {});
+  });
+}
+</script>
+</body>
+</html>

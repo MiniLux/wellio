@@ -1,0 +1,9 @@
+node_modules
+src
+test
+build
+build.js
+make_icons.py
+package.json
+package-lock.json
+README.md
