@@ -6,8 +6,8 @@
 'use strict';
 
 const APP_NAME = 'Wellio';
-const APP_VERSION = '1.0.0';
-const SCHEMA_VERSION = 1;
+const APP_VERSION = '1.1.0';
+const SCHEMA_VERSION = 2;
 const LS_KEY = 'wellio.db.v1';
 const IDB_NAME = 'wellio';
 const IDB_STORE = 'kv';
@@ -23,6 +23,22 @@ const DEFAULT_TAGS = {
   pain: ['Nuque', 'Épaules', 'Dos', 'Lombaires', 'Hanches', 'Genoux', 'Jambes', 'Mâchoire'],
   numb: ['Main gauche', 'Main droite', 'Bras', 'Pieds', 'Jambes', 'Visage']
 };
+
+/* Boissons proposées par défaut. `ml` = volume d'un verre/tasse type ;
+   `caf` marque les boissons caféinées, `alc` les boissons alcoolisées. */
+const DEFAULT_DRINKS = [
+  { name: 'Eau', icon: '💧', ml: 250 },
+  { name: 'Eau pétillante', icon: '🫧', ml: 250 },
+  { name: 'Café', icon: '☕', ml: 100, caf: true },
+  { name: 'Thé', icon: '🍵', ml: 200, caf: true },
+  { name: 'Tisane', icon: '🌿', ml: 200 },
+  { name: 'Jus de fruit', icon: '🧃', ml: 200 },
+  { name: 'Soda', icon: '🥤', ml: 330 },
+  { name: 'Lait', icon: '🥛', ml: 200 },
+  { name: 'Bouillon', icon: '🍲', ml: 200 },
+  { name: 'Vin', icon: '🍷', ml: 125, alc: true },
+  { name: 'Bière', icon: '🍺', ml: 250, alc: true }
+];
 
 const MEALS = [
   { key: 'breakfast', label: 'Petit-déjeuner', icon: '🌅' },
@@ -51,6 +67,7 @@ function emptyEntry(date) {
   return {
     date,
     meals: { breakfast: { text: '', tags: [] }, lunch: { text: '', tags: [] }, dinner: { text: '', tags: [] }, bonus: { text: '', tags: [] } },
+    drinks: { items: [], note: '' }, // items : [{ name, ml, t: "HH:MM"|null }]
     steps: null,
     activity: { tags: [], minutes: null, note: '' },
     sleep: { hours: null, quality: null, pain: false, painTags: [], painNote: '', numbness: false, numbTags: [], numbNote: '' },
@@ -68,6 +85,7 @@ function freshDB() {
     createdAt: new Date().toISOString(),
     entries: {},
     tags: JSON.parse(JSON.stringify(DEFAULT_TAGS)),
+    drinks: JSON.parse(JSON.stringify(DEFAULT_DRINKS)),
     settings: { lastExportAt: null }
   };
 }
@@ -111,6 +129,14 @@ function migrate(data) {
   db.schemaVersion = SCHEMA_VERSION;
   db.tags = Object.assign({}, base.tags, data.tags || {});
   db.settings = Object.assign({}, base.settings, data.settings || {});
+  // liste des boissons : celle de l'utilisateur si elle existe, sinon celle par défaut
+  db.drinks = (Array.isArray(data.drinks) && data.drinks.length)
+    ? data.drinks.filter(d => d && d.name).map(d => ({
+      name: String(d.name), icon: d.icon || '🥛',
+      ml: Number(d.ml) > 0 ? Number(d.ml) : 200,
+      caf: !!d.caf, alc: !!d.alc
+    }))
+    : base.drinks;
   // normalise chaque entrée sur le schéma courant
   const norm = {};
   for (const [date, e] of Object.entries(db.entries)) {
@@ -118,6 +144,10 @@ function migrate(data) {
     const t = emptyEntry(date);
     deepMerge(t, e);
     t.date = date;
+    t.drinks.items = (t.drinks.items || []).filter(i => i && i.name).map(i => ({
+      name: String(i.name), ml: Number(i.ml) > 0 ? Number(i.ml) : 0,
+      t: typeof i.t === 'string' ? i.t : null
+    }));
     norm[date] = t;
   }
   db.entries = norm;
@@ -159,6 +189,7 @@ function isBlank(e) {
   if (e.mood.score != null || e.mood.note) return false;
   if (e.sleep.hours != null || e.sleep.quality != null || e.sleep.pain || e.sleep.numbness) return false;
   if (e.symptoms.tags.length || e.symptoms.note) return false;
+  if (e.drinks.items.length || e.drinks.note) return false;
   if (e.activity.tags.length || e.activity.note || e.activity.minutes != null) return false;
   for (const m of MEALS) { const x = e.meals[m.key]; if (x.text || x.tags.length) return false; }
   return true;
@@ -172,6 +203,7 @@ function completeness(e) {
   if (!e) return 0;
   let n = 0;
   if (MEALS.some(m => e.meals[m.key].text || e.meals[m.key].tags.length)) n++;
+  if (e.drinks.items.length || e.drinks.note) n++;
   if (e.steps != null) n++;
   if (e.activity.tags.length || e.activity.minutes != null || e.activity.note) n++;
   if (e.sleep.hours != null || e.sleep.quality != null) n++;
@@ -179,6 +211,43 @@ function completeness(e) {
   if (e.stress != null) n++;
   if (e.mood.score != null) n++;
   return n;
+}
+
+/* ---------- boissons ---------- */
+function drinkDef(name) {
+  return DB.drinks.find(d => d.name === name) || { name, icon: '🥛', ml: 0, caf: false, alc: false };
+}
+/** Totaux du jour : volume, nombre de verres, caféine, alcool, heure du dernier café/thé. */
+function drinkStats(e) {
+  const items = (e && e.drinks && e.drinks.items) || [];
+  let ml = 0, caf = 0, alc = 0, lastCaf = null;
+  for (const it of items) {
+    const def = drinkDef(it.name);
+    ml += Number(it.ml) || def.ml || 0;
+    if (def.caf) {
+      caf++;
+      if (it.t) { const h = hhmmToHours(it.t); if (lastCaf === null || h > lastCaf) lastCaf = h; }
+    }
+    if (def.alc) alc++;
+  }
+  return { ml, count: items.length, caf, alc, lastCaf };
+}
+function hhmmToHours(s) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s || '');
+  return m ? Number(m[1]) + Number(m[2]) / 60 : null;
+}
+function hoursToHHMM(h) {
+  if (h === null || h === undefined) return '—';
+  const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+  return `${hh}h${String(mm).padStart(2, '0')}`;
+}
+function fmtVolume(ml) {
+  if (!ml) return '0 ml';
+  return ml >= 1000 ? (ml / 1000).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + ' L' : Math.round(ml) + ' ml';
+}
+function nowHHMM() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
 /* ---------- dates ---------- */
@@ -257,4 +326,50 @@ function promptDlg(title, placeholder, okLabel) {
     setTimeout(() => { try { input.focus(); } catch (e) { } }, 60);
   });
 }
+/** Choix d'une quantité en ml : raccourcis courants + saisie libre. */
+const QTY_PRESETS = [100, 150, 200, 250, 330, 500, 750, 1000];
+function promptQty(title, currentMl) {
+  return new Promise(resolve => {
+    const dlg = $('#qty-dlg'), form = $('#qty-form'), input = $('#qty-input');
+    $('#qty-title').textContent = title;
+    input.value = currentMl > 0 ? currentMl : '';
+    let done = false;
+    const finish = v => {
+      if (done) return;
+      done = true;
+      form.onsubmit = null; $('#qty-cancel').onclick = null; dlg.onclose = null;
+      if (dlg.open) dlg.close();
+      resolve(v);
+    };
+    $('#qty-presets').replaceChildren(...QTY_PRESETS.map(ml => el('button', {
+      type: 'button', class: 'chip' + (ml === currentMl ? ' on' : ''),
+      text: ml >= 1000 ? (ml / 1000).toLocaleString('fr-FR') + ' L' : ml + ' ml',
+      onclick: () => { haptic(); finish(ml); }
+    })));
+    form.onsubmit = ev => {
+      ev.preventDefault();
+      const v = parseInt(input.value, 10);
+      finish(Number.isFinite(v) && v >= 0 ? v : null);
+    };
+    $('#qty-cancel').onclick = () => finish(null);
+    dlg.onclose = () => finish(null);
+    dlg.showModal();
+  });
+}
+
+/** Appui long (≈450 ms) sans casser le clic simple. */
+function onLongPress(node, handler) {
+  let timer = null, fired = false;
+  const start = () => {
+    fired = false;
+    clearTimeout(timer);
+    timer = setTimeout(() => { fired = true; haptic(); handler(); }, 450);
+  };
+  const cancel = () => clearTimeout(timer);
+  node.addEventListener('pointerdown', start);
+  ['pointerup', 'pointercancel', 'pointerleave', 'pointermove'].forEach(ev => node.addEventListener(ev, cancel));
+  node.addEventListener('contextmenu', ev => ev.preventDefault());
+  return () => fired; // à consulter dans le clic pour l'ignorer après un appui long
+}
+
 function haptic() { if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} } }

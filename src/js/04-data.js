@@ -45,9 +45,28 @@ function csvCell(v) {
 }
 const CSV_SEP = ';'; // Excel/Numbers en français
 
+/** Les 7 colonnes « boissons » d'une journée. */
+function drinkCsvCells(e) {
+  const st = drinkStats(e);
+  const counts = new Map();
+  e.drinks.items.forEach(i => counts.set(i.name, (counts.get(i.name) || 0) + 1));
+  const detail = [...counts.entries()].map(([n, c]) => `${n} x${c}`).join(', ');
+  return [
+    e.drinks.items.length ? st.ml : null,
+    e.drinks.items.length ? st.count : null,
+    detail,
+    e.drinks.items.length ? st.caf : null,
+    e.drinks.items.length ? st.alc : null,
+    st.lastCaf === null ? '' : hoursToHHMM(st.lastCaf).replace('h', ':'),
+    e.drinks.note
+  ];
+}
+
 function exportCSVWide() {
   const head = ['date', 'jour_semaine', 'petit_dejeuner', 'petit_dejeuner_tags', 'dejeuner', 'dejeuner_tags',
-    'diner', 'diner_tags', 'bonus', 'bonus_tags', 'pas', 'activites', 'activite_minutes', 'activite_note',
+    'diner', 'diner_tags', 'bonus', 'bonus_tags',
+    'boissons_total_ml', 'boissons_nb', 'boissons_detail', 'cafeine_nb', 'alcool_nb', 'dernier_cafe', 'boissons_note',
+    'pas', 'activites', 'activite_minutes', 'activite_note',
     'sommeil_heures', 'sommeil_qualite_1_5', 'douleurs', 'douleurs_zones', 'douleurs_note',
     'engourdissements', 'engourdissements_zones', 'engourdissements_note',
     'symptomes', 'symptomes_nombre', 'symptomes_note', 'stress_0_10', 'humeur_1_5', 'humeur_note', 'modifie_le'];
@@ -61,6 +80,7 @@ function exportCSVWide() {
       m('lunch').text, m('lunch').tags.join(', '),
       m('dinner').text, m('dinner').tags.join(', '),
       m('bonus').text, m('bonus').tags.join(', '),
+      ...drinkCsvCells(e),
       e.steps, e.activity.tags.join(', '), e.activity.minutes, e.activity.note,
       e.sleep.hours, e.sleep.quality,
       e.sleep.pain ? 'oui' : 'non', e.sleep.painTags.join(', '), e.sleep.painNote,
@@ -81,6 +101,9 @@ function exportCSVLong() {
       push(d, 'repas', m.key + '_texte', e.meals[m.key].text);
       e.meals[m.key].tags.forEach(t => push(d, 'repas', m.key + '_tag', t));
     });
+    e.drinks.items.forEach(i => push(d, 'boissons', i.name, `${i.ml || drinkDef(i.name).ml} ml${i.t ? ' à ' + i.t : ''}`));
+    push(d, 'boissons', 'total_ml', e.drinks.items.length ? drinkStats(e).ml : null);
+    push(d, 'boissons', 'note', e.drinks.note);
     push(d, 'activite', 'pas', e.steps);
     push(d, 'activite', 'minutes', e.activity.minutes);
     push(d, 'activite', 'note', e.activity.note);
@@ -164,8 +187,58 @@ function renderTagManager() {
   box.replaceChildren(...parts);
 }
 
+/* ---------- gestion des boissons ---------- */
+function renderDrinkManager() {
+  const box = $('#drink-manager');
+  const rows = DB.drinks.map((d, idx) => el('div', { class: 'drink-edit' }, [
+    el('span', { class: 'name', text: `${d.icon} ${d.name}` }),
+    el('input', {
+      type: 'number', inputmode: 'numeric', min: '0', max: '2000', step: '25', value: String(d.ml),
+      'aria-label': `Volume d'un ${d.name.toLowerCase()} en ml`,
+      oninput: ev => {
+        const v = parseInt(ev.target.value, 10);
+        d.ml = Number.isFinite(v) && v >= 0 ? v : 0;
+        persist(); renderDrinks();
+      }
+    }),
+    el('span', { style: 'font-size:12px;color:var(--ink-3)', text: 'ml' }),
+    el('button', {
+      type: 'button', class: 'chip' + (d.caf ? ' on' : ''), text: '☕', title: 'Boisson caféinée', 'aria-label': 'Caféinée',
+      'aria-pressed': String(!!d.caf),
+      onclick: () => { d.caf = !d.caf; persist(true); renderDrinkManager(); renderDrinks(); }
+    }),
+    el('button', {
+      type: 'button', class: 'chip' + (d.alc ? ' on' : ''), text: '🍷', title: 'Boisson alcoolisée', 'aria-label': 'Alcoolisée',
+      'aria-pressed': String(!!d.alc),
+      onclick: () => { d.alc = !d.alc; persist(true); renderDrinkManager(); renderDrinks(); }
+    }),
+    el('button', {
+      type: 'button', class: 'del', text: '×', 'aria-label': `Supprimer ${d.name}`,
+      onclick: async () => {
+        const ok = await confirmDlg('Supprimer cette boisson ?', `« ${d.name} » ne sera plus proposée. Les journées déjà enregistrées ne changent pas.`, 'Supprimer');
+        if (!ok) return;
+        DB.drinks.splice(idx, 1);
+        persist(true); renderDrinkManager(); renderDrinks();
+      }
+    })
+  ]));
+  rows.push(el('div', { class: 'chips', style: 'margin-top:10px' }, [
+    el('button', {
+      type: 'button', class: 'chip add', text: '+ ajouter une boisson',
+      onclick: async () => {
+        const v = await promptDlg('Nouvelle boisson', 'Nom (ex. Kéfir)');
+        if (!v || DB.drinks.some(d => d.name.toLowerCase() === v.toLowerCase())) return;
+        DB.drinks.push({ name: v, icon: '🥛', ml: 200, caf: false, alc: false });
+        persist(true); renderDrinkManager(); renderDrinks();
+      }
+    })
+  ]));
+  box.replaceChildren(...rows);
+}
+
 /* ---------- infos & bannière ---------- */
 async function renderDataScreen() {
+  renderDrinkManager();
   renderTagManager();
 
   const n = Object.keys(DB.entries).length;

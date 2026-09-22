@@ -131,6 +131,63 @@ function seed() {
   await page.waitForTimeout(200);
   check('annulation sans effet', await page.evaluate(() => !DB.tags.activity.includes('À jeter')));
 
+  // boissons : compteurs, total, retrait
+  console.log('\n— Boissons —');
+  const drinkChip = n => page.locator('#drink-chips .chip.drink').nth(n);
+  await drinkChip(0).click(); await page.waitForTimeout(120);
+  await drinkChip(0).click(); await page.waitForTimeout(120);
+  await drinkChip(2).click(); await page.waitForTimeout(250);
+  const dr = await page.evaluate(() => {
+    const e = DB.entries[todayISO()];
+    const st = drinkStats(e);
+    return { n: e.drinks.items.length, ml: st.ml, caf: st.caf, t: e.drinks.items.every(i => /^\d{2}:\d{2}$/.test(i.t)) };
+  });
+  check('3 boissons enregistrées', dr.n === 3, JSON.stringify(dr));
+  check('volume total calculé', dr.ml === 250 * 2 + 100, dr.ml + ' ml');
+  check('café compté comme caféine', dr.caf === 1);
+  check('heure enregistrée automatiquement', dr.t);
+  check('compteur affiché sur la pastille', (await drinkChip(0).locator('.cnt').textContent()) === '2');
+  check('total affiché', (await page.locator('#drink-total').textContent()).includes('600'));
+  check('une ligne par verre', (await page.locator('#drink-log .drink-row').count()) === 3);
+
+  // quantité modifiable après coup
+  await page.locator('#drink-log .drink-row .qty').first().click();
+  await page.waitForTimeout(250);
+  check('fenêtre quantité ouverte', await page.locator('#qty-dlg').isVisible());
+  await page.locator('#qty-presets .chip', { hasText: '500 ml' }).first().click();
+  await page.waitForTimeout(250);
+  check('quantité modifiée', await page.evaluate(() => DB.entries[todayISO()].drinks.items[0].ml === 500));
+  check('total recalculé', await page.evaluate(() => drinkStats(DB.entries[todayISO()]).ml === 500 + 250 + 100));
+  check('quantité affichée dans la ligne', (await page.locator('#drink-log .drink-row .qty').first().textContent()).includes('500'));
+
+  // saisie libre d'un volume
+  await page.locator('#drink-log .drink-row .qty').first().click();
+  await page.waitForTimeout(200);
+  await page.locator('#qty-input').fill('1000');
+  await page.locator('#qty-ok').click();
+  await page.waitForTimeout(250);
+  check('volume libre accepté', await page.evaluate(() => DB.entries[todayISO()].drinks.items[0].ml === 1000));
+  check('affichage en litres', (await page.locator('#drink-total').textContent()).includes('L'));
+
+  // appui long sur une pastille = choix de la quantité avant ajout
+  const box = await drinkChip(1).boundingBox();
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+  await page.mouse.down();
+  await page.waitForTimeout(700);
+  await page.mouse.up();
+  await page.waitForTimeout(250);
+  check('appui long ouvre le choix de quantité', await page.locator('#qty-dlg').isVisible());
+  await page.locator('#qty-cancel').click();
+  await page.waitForTimeout(200);
+  check('annulation : aucun verre ajouté', await page.evaluate(() => DB.entries[todayISO()].drinks.items.length === 3));
+
+  await page.locator('#drink-log .drink-row .minus').first().click();
+  await page.waitForTimeout(250);
+  check('retrait d\'un verre', await page.evaluate(() => DB.entries[todayISO()].drinks.items.length === 2));
+  check('heure enregistrée sans être affichée', await page.evaluate(() =>
+    DB.entries[todayISO()].drinks.items.every(i => /^\d{2}:\d{2}$/.test(i.t))
+  ) && !(await page.locator('#drink-log').textContent()).match(/\d{2}h\d{2}/));
+
   console.log('\n— Stats —');
   await page.locator('.tabbar button[data-scr="stats"]').click();
   await page.waitForTimeout(500);
@@ -161,8 +218,9 @@ function seed() {
   const csv = await page.evaluate(() => exportCSVWide());
   const rows = csv.trim().split('\n');
   check('CSV : une ligne par jour + en-tête', rows.length === (await page.evaluate(() => Object.keys(DB.entries).length)) + 1, rows.length + ' lignes');
-  check('CSV : 29 colonnes', rows[0].split(';').length === 29, rows[0].split(';').length + '');
-  check('CSV : pas de séparateur cassé', rows.every(l => l.split(';').length >= 29));
+  check('CSV : 36 colonnes', rows[0].split(';').length === 36, rows[0].split(';').length + '');
+  check('CSV : pas de séparateur cassé', rows.every(l => l.split(';').length >= 36));
+  check('CSV : colonnes boissons présentes', rows[0].includes('boissons_total_ml') && rows[0].includes('dernier_cafe'));
   const csvLong = await page.evaluate(() => exportCSVLong());
   check('CSV détaillé non vide', csvLong.split('\n').length > 500);
 

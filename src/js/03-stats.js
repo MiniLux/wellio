@@ -8,6 +8,10 @@ const VARS = [
   { key: 'sleepHours', label: 'Sommeil (h)', short: 'Sommeil', subj: 'le sommeil', unit: 'h', dec: 1, get: e => e.sleep.hours },
   { key: 'sleepQuality', label: 'Qualité du sommeil', short: 'Qualité sommeil', subj: 'la qualité du sommeil', unit: '/5', dec: 1, get: e => e.sleep.quality },
   { key: 'steps', label: 'Nombre de pas', short: 'Pas', subj: 'le nombre de pas', unit: '', dec: 0, get: e => e.steps },
+  { key: 'hydration', label: 'Volume bu (L)', short: 'Boissons', subj: 'le volume bu', unit: ' L', dec: 1, get: e => e.drinks.items.length ? drinkStats(e).ml / 1000 : null },
+  { key: 'caffeine', label: 'Boissons caféinées', short: 'Caféine', subj: 'le nombre de boissons caféinées', unit: '', dec: 1, get: e => e.drinks.items.length ? drinkStats(e).caf : null },
+  { key: 'alcohol', label: "Verres d'alcool", short: 'Alcool', subj: "le nombre de verres d'alcool", unit: '', dec: 1, get: e => e.drinks.items.length ? drinkStats(e).alc : null },
+  { key: 'lastCaf', label: 'Heure du dernier café / thé', short: 'Dernier café', subj: "l'heure du dernier café", unit: '', dec: 1, get: e => drinkStats(e).lastCaf },
   { key: 'activityMin', label: "Durée d'activité (min)", short: 'Activité', subj: "la durée d'activité", unit: ' min', dec: 0, get: e => e.activity.minutes },
   { key: 'stress', label: 'Niveau de stress', short: 'Stress', subj: 'le stress', unit: '/10', dec: 1, get: e => e.stress },
   { key: 'mood', label: 'Humeur', short: 'Humeur', subj: "l'humeur", unit: '/5', dec: 1, get: e => e.mood.score },
@@ -28,6 +32,11 @@ const causePhrase = V => V.bool ? V.cause : `${V.subj} augmente`;
 /** « le stress a tendance à diminuer » / « les douleurs sont plus fréquentes ». */
 const effectPhrase = (V, r) => V.bool ? (r > 0 ? V.more : V.less) : `${V.subj} a tendance à ${r > 0 ? 'augmenter' : 'diminuer'}`;
 const VAR_BY_KEY = Object.fromEntries(VARS.map(v => [v.key, v]));
+
+/* Paires liées par construction (leur corrélation n'apprend rien) :
+   plus de cafés ⇒ dernier café plus tard, plus de verres ⇒ plus de volume bu. */
+const REDUNDANT_PAIRS = new Set(['caffeine|lastCaf', 'caffeine|hydration', 'alcohol|hydration']);
+const isRedundant = (a, b) => REDUNDANT_PAIRS.has([a, b].sort().join('|'));
 
 let period = 90;
 let lag = 0;
@@ -123,6 +132,7 @@ function niceTicks(lo, hi, count) {
 function tickLabel(V, v) {
   if (V.bool) return v > 0.5 ? 'oui' : 'non';
   if (V.key === 'steps') return Math.abs(v) >= 1000 ? (v / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + 'k' : String(Math.round(v));
+  if (V.key === 'lastCaf') return Math.round(v) + 'h';
   let r = Math.round(v * 100) / 100;
   if (r === 0) r = 0; // évite « -0 »
   return r.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
@@ -145,13 +155,20 @@ function mulberry(a) {
   };
 }
 
+/** Nombre au format français (virgule décimale). */
+function nf(v, dec) {
+  return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
 function fmtVal(key, v) {
   if (v === null || v === undefined) return '—';
   const V = VAR_BY_KEY[key];
   if (V.bool) return Math.round(v * 100) + ' %';
   if (key === 'steps') return Math.round(v).toLocaleString('fr-FR');
   if (key === 'sleepHours') return fmtHours(Math.round(v * 4) / 4);
-  return v.toFixed(V.dec) + V.unit;
+  if (key === 'hydration') return fmtVolume(Math.round(v * 1000));
+  if (key === 'lastCaf') return hoursToHHMM(Math.round(v * 4) / 4);
+  return nf(v, V.dec) + V.unit;
 }
 
 /* ---------- rendu ---------- */
@@ -174,7 +191,9 @@ function renderKpis(dates) {
     { k: 'Jours renseignés', v: String(filled.length), s: period ? `sur ${period} j` : '' },
     { k: 'Sommeil moyen', v: avg('sleepHours') === null ? '—' : fmtHours(Math.round(avg('sleepHours') * 4) / 4), s: '' },
     { k: 'Pas / jour', v: avg('steps') === null ? '—' : Math.round(avg('steps')).toLocaleString('fr-FR'), s: '' },
-    { k: 'Stress moyen', v: avg('stress') === null ? '—' : avg('stress').toFixed(1), s: '/10' }
+    { k: 'Stress moyen', v: avg('stress') === null ? '—' : nf(avg('stress'), 1), s: '/10' },
+    { k: 'Boissons / jour', v: avg('hydration') === null ? '—' : fmtVolume(Math.round(avg('hydration') * 1000)), s: '' },
+    { k: 'Caféine / jour', v: avg('caffeine') === null ? '—' : nf(avg('caffeine'), 1), s: '' }
   ];
   $('#kpis').replaceChildren(...items.map(i => el('div', { class: 'kpi' }, [
     el('div', { class: 'v' }, [document.createTextNode(i.v), i.s ? el('small', { text: ' ' + i.s }) : null]),
@@ -190,6 +209,7 @@ function renderTopCorrelations() {
       for (let j = 0; j < VARS.length; j++) {
         if (i === j) continue;
         if (L === 0 && j < i) continue; // symétrique
+        if (isRedundant(VARS[i].key, VARS[j].key)) continue;
         const res = pearson(pairs(VARS[i].key, VARS[j].key, L));
         if (!res || res.n < 7) continue;
         if (Math.abs(res.r) < 0.25) continue;
@@ -198,7 +218,21 @@ function renderTopCorrelations() {
     }
   }
   found.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
-  const top = found.slice(0, 8);
+  // on limite chaque variable à 3 apparitions : sinon une paire très liée
+  // (sommeil / qualité / stress) monopolise la liste et masque les autres pistes
+  const used = new Map();
+  const seen = new Set();
+  const top = [];
+  for (const c of found) {
+    const pairKey = [c.x.key, c.y.key].sort().join('|');
+    if (seen.has(pairKey + c.lag)) continue;
+    if ((used.get(c.x.key) || 0) >= 3 || (used.get(c.y.key) || 0) >= 3) continue;
+    used.set(c.x.key, (used.get(c.x.key) || 0) + 1);
+    used.set(c.y.key, (used.get(c.y.key) || 0) + 1);
+    seen.add(pairKey + c.lag);
+    top.push(c);
+    if (top.length === 8) break;
+  }
 
   if (!top.length) {
     box.replaceChildren(el('div', { class: 'empty' }, [
@@ -214,7 +248,7 @@ function renderTopCorrelations() {
       class: 'corr-item', type: 'button', style: 'width:100%;text-align:left',
       onclick: () => { varX = c.x.key; varY = c.y.key; lag = c.lag; syncStatControls(); renderScatter(); $('#scatter-box').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     }, [
-      el('span', { class: 'rbadge', text: (c.r > 0 ? '+' : '') + c.r.toFixed(2), style: `background:${corrColor(c.r)}` }),
+      el('span', { class: 'rbadge', text: (c.r > 0 ? '+' : '') + nf(c.r, 2), style: `background:${corrColor(c.r)}` }),
       el('span', { class: 'txt' }, [
         document.createTextNode(`Quand ${causePhrase(c.x)}, ${effectPhrase(c.y, c.r)}${when}.`),
         el('small', { text: `${strengthLabel(c.r)} · ${c.n} jours comparés · ${fiab}` })
@@ -297,7 +331,7 @@ function renderScatter() {
 
   const caption = res
     ? el('p', { class: 'hint', style: 'margin-top:4px' }, [
-      el('strong', { text: `r = ${res.r >= 0 ? '+' : ''}${res.r.toFixed(2)}` }),
+      el('strong', { text: `r = ${res.r >= 0 ? '+' : ''}${nf(res.r, 2)}` }),
       document.createTextNode(` · ${strengthLabel(res.r)} · ${res.n} jours · ${res.p < 0.05 ? 'peu probable au hasard' : 'peut être dû au hasard'}`)
     ])
     : el('p', { class: 'hint', text: 'Variation insuffisante pour calculer une corrélation.' });
@@ -315,6 +349,7 @@ function allTagsUsed() {
     const e = DB.entries[d]; if (!e) continue;
     const set = new Set();
     MEALS.forEach(m => e.meals[m.key].tags.forEach(t => set.add('🍽 ' + t)));
+    e.drinks.items.forEach(i => set.add('🥤 ' + i.name));
     e.activity.tags.forEach(t => set.add('🚶 ' + t));
     e.symptoms.tags.forEach(t => set.add('🩺 ' + t));
     for (const t of set) {
@@ -363,7 +398,7 @@ function renderTagEffects() {
     const pct = Math.abs(r.diff) / maxAbs * 100;
     const sign = r.diff > 0 ? '+' : '';
     return el('div', { class: 'corr-item' }, [
-      el('span', { class: 'rbadge', text: sign + (T.bool ? Math.round(r.diff * 100) + '%' : r.diff.toFixed(T.dec)), style: `background:${corrColor(r.diff)}` }),
+      el('span', { class: 'rbadge', text: sign + (T.bool ? Math.round(r.diff * 100) + '%' : nf(r.diff, T.dec)), style: `background:${corrColor(r.diff)}` }),
       el('span', { class: 'txt' }, [
         document.createTextNode(`${r.tag}${r.lag ? ' → lendemain' : ''}`),
         el('small', { text: `${T.short} : ${fmtVal(target, r.mw)} avec · ${fmtVal(target, r.mo)} sans · ${r.n} jours` }),
@@ -401,11 +436,11 @@ function renderWeekly() {
     const s = cell(ds, 'sleepHours'), p = cell(ds, 'steps'), st = cell(ds, 'stress'), m = cell(ds, 'mood'), sy = cell(ds, 'symptomCount');
     return el('tr', {}, [
       el('td', { text: 'sem. du ' + shortDate(k) }),
-      el('td', { text: s === null ? '—' : (Math.round(s * 10) / 10).toFixed(1) }),
+      el('td', { text: s === null ? '—' : nf(s, 1) }),
       el('td', { text: p === null ? '—' : Math.round(p).toLocaleString('fr-FR') }),
-      el('td', { text: st === null ? '—' : st.toFixed(1) }),
-      el('td', { text: m === null ? '—' : m.toFixed(1) }),
-      el('td', { text: sy === null ? '—' : sy.toFixed(1) })
+      el('td', { text: st === null ? '—' : nf(st, 1) }),
+      el('td', { text: m === null ? '—' : nf(m, 1) }),
+      el('td', { text: sy === null ? '—' : nf(sy, 1) })
     ]);
   });
   const tbl = el('table', { class: 'tbl' }, [el('thead', {}, head), el('tbody', {}, body)]);

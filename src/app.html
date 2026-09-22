@@ -25,6 +25,15 @@
         <div id="meals"></div>
       </div>
 
+      <!-- Boissons -->
+      <div class="card">
+        <h2><span class="ic">🥤</span> Boissons <span class="spacer"></span><span id="drink-total" class="h2-value">0 ml</span></h2>
+        <div class="hydra"><div class="hydra-fill" id="drink-bar"></div><span class="hydra-mark" title="repère 1,5 L"></span></div>
+        <div class="chips" id="drink-chips" style="margin-top:10px"></div>
+        <div id="drink-log"></div>
+        <input type="text" id="f-drink-note" placeholder="Précisions (soif inhabituelle, eau gazeuse…)" style="margin-top:10px">
+      </div>
+
       <!-- Activité -->
       <div class="card">
         <h2><span class="ic">🚶</span> Activité</h2>
@@ -166,6 +175,12 @@
       </div>
 
       <div class="card">
+        <h2><span class="ic">🥤</span> Mes boissons</h2>
+        <div id="drink-manager"></div>
+        <p class="hint">Le volume sert au total bu de la journée. « Caféine » et « alcool » alimentent les statistiques dédiées.</p>
+      </div>
+
+      <div class="card">
         <h2><span class="ic">🏷️</span> Mes tags</h2>
         <div id="tag-manager"></div>
       </div>
@@ -203,6 +218,19 @@
       <button class="btn danger" id="cf-ok"></button>
       <button class="btn sec" id="cf-cancel" style="margin-top:8px">Annuler</button>
     </div>
+  </dialog>
+
+  <dialog id="qty-dlg">
+    <form class="dlg-body" id="qty-form" method="dialog">
+      <h3 id="qty-title">Quantité</h3>
+      <div class="chips" id="qty-presets" style="margin-bottom:12px"></div>
+      <div class="qty-field">
+        <input type="number" id="qty-input" inputmode="numeric" min="0" max="5000" step="10" aria-label="Quantité en millilitres">
+        <span>ml</span>
+      </div>
+      <button class="btn" id="qty-ok" type="submit" style="margin-top:14px">Valider</button>
+      <button class="btn sec" id="qty-cancel" type="button" style="margin-top:8px">Annuler</button>
+    </form>
   </dialog>
 
   <dialog id="prompt-dlg">

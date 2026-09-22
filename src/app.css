@@ -196,6 +196,35 @@ input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border: 0; bo
 .meal:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
 .meal h3 { font-size: 14.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
 
+/* Boissons */
+.card > h2 .spacer { flex: 1; }
+.h2-value { font-size: 15px; font-weight: 650; color: var(--ink); text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.hydra { position: relative; height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.hydra-fill { height: 100%; width: 0; border-radius: 3px; background: var(--s1); transition: width .25s ease; }
+.hydra-mark { position: absolute; top: -2px; bottom: -2px; left: 75%; width: 1.5px; background: var(--ink-3); opacity: .5; border-radius: 1px; }
+.chip.drink { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; }
+.chip.drink .cnt { min-width: 19px; height: 19px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 700; display: grid; place-items: center; padding: 0 5px; }
+.chip.drink.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); color: var(--ink); font-weight: 550; }
+.drink-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.drink-row .name { flex: 1; min-width: 0; }
+.drink-row .name small { display: block; color: var(--ink-3); font-size: 11.5px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drink-row .qty {
+  flex: none; min-width: 74px; padding: 7px 12px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line-strong);
+  color: var(--ink); font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.drink-row .qty:active { background: var(--accent-soft); border-color: var(--accent); }
+.qty-field { display: flex; align-items: center; gap: 8px; }
+.qty-field input { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.qty-field span { color: var(--ink-3); font-size: 14px; }
+#qty-presets .chip { min-width: 62px; justify-content: center; text-align: center; }
+.drink-row .minus { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-3); color: var(--accent); font-size: 18px; font-weight: 600; display: grid; place-items: center; flex: none; }
+.drink-edit { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line); }
+.drink-edit .name { flex: 1; min-width: 0; font-size: 14.5px; }
+.drink-edit input[type="number"] { width: 68px; text-align: right; padding: 7px 8px; }
+.drink-edit .chip { padding: 5px 9px; font-size: 12px; }
+.drink-edit .del { width: 30px; height: 30px; border-radius: 50%; color: var(--crit); font-size: 17px; display: grid; place-items: center; flex: none; }
+
 .hint { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; line-height: 1.4; }
 .saved-flag { font-size: 12px; color: var(--good); opacity: 0; transition: opacity .25s; }
 .saved-flag.on { opacity: 1; }

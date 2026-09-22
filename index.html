@@ -216,6 +216,35 @@ input[type="range"]::-moz-range-thumb { width: 24px; height: 24px; border: 0; bo
 .meal:first-of-type { border-top: 0; padding-top: 0; margin-top: 0; }
 .meal h3 { font-size: 14.5px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px; }
 
+/* Boissons */
+.card > h2 .spacer { flex: 1; }
+.h2-value { font-size: 15px; font-weight: 650; color: var(--ink); text-transform: none; letter-spacing: 0; font-variant-numeric: tabular-nums; }
+.hydra { position: relative; height: 6px; border-radius: 3px; background: var(--surface-3); overflow: hidden; }
+.hydra-fill { height: 100%; width: 0; border-radius: 3px; background: var(--s1); transition: width .25s ease; }
+.hydra-mark { position: absolute; top: -2px; bottom: -2px; left: 75%; width: 1.5px; background: var(--ink-3); opacity: .5; border-radius: 1px; }
+.chip.drink { display: inline-flex; align-items: center; gap: 6px; padding: 8px 12px; }
+.chip.drink .cnt { min-width: 19px; height: 19px; border-radius: 999px; background: var(--accent); color: #fff; font-size: 11.5px; font-weight: 700; display: grid; place-items: center; padding: 0 5px; }
+.chip.drink.on { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); color: var(--ink); font-weight: 550; }
+.drink-row { display: flex; align-items: center; gap: 10px; padding: 9px 0; border-top: 1px solid var(--line); font-size: 14px; }
+.drink-row .name { flex: 1; min-width: 0; }
+.drink-row .name small { display: block; color: var(--ink-3); font-size: 11.5px; margin-top: 1px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.drink-row .qty {
+  flex: none; min-width: 74px; padding: 7px 12px; border-radius: 999px;
+  background: var(--surface-2); border: 1px solid var(--line-strong);
+  color: var(--ink); font-size: 13.5px; font-weight: 600; font-variant-numeric: tabular-nums;
+}
+.drink-row .qty:active { background: var(--accent-soft); border-color: var(--accent); }
+.qty-field { display: flex; align-items: center; gap: 8px; }
+.qty-field input { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+.qty-field span { color: var(--ink-3); font-size: 14px; }
+#qty-presets .chip { min-width: 62px; justify-content: center; text-align: center; }
+.drink-row .minus { width: 32px; height: 32px; border-radius: 50%; background: var(--surface-3); color: var(--accent); font-size: 18px; font-weight: 600; display: grid; place-items: center; flex: none; }
+.drink-edit { display: flex; align-items: center; gap: 8px; padding: 9px 0; border-top: 1px solid var(--line); }
+.drink-edit .name { flex: 1; min-width: 0; font-size: 14.5px; }
+.drink-edit input[type="number"] { width: 68px; text-align: right; padding: 7px 8px; }
+.drink-edit .chip { padding: 5px 9px; font-size: 12px; }
+.drink-edit .del { width: 30px; height: 30px; border-radius: 50%; color: var(--crit); font-size: 17px; display: grid; place-items: center; flex: none; }
+
 .hint { font-size: 12.5px; color: var(--ink-3); margin-top: 8px; line-height: 1.4; }
 .saved-flag { font-size: 12px; color: var(--good); opacity: 0; transition: opacity .25s; }
 .saved-flag.on { opacity: 1; }
@@ -297,6 +326,15 @@ dialog p { font-size: 14px; color: var(--ink-2); margin: 0 0 14px; line-height: 
       <div class="card">
         <h2><span class="ic">🍽️</span> Repas</h2>
         <div id="meals"></div>
+      </div>
+
+      <!-- Boissons -->
+      <div class="card">
+        <h2><span class="ic">🥤</span> Boissons <span class="spacer"></span><span id="drink-total" class="h2-value">0 ml</span></h2>
+        <div class="hydra"><div class="hydra-fill" id="drink-bar"></div><span class="hydra-mark" title="repère 1,5 L"></span></div>
+        <div class="chips" id="drink-chips" style="margin-top:10px"></div>
+        <div id="drink-log"></div>
+        <input type="text" id="f-drink-note" placeholder="Précisions (soif inhabituelle, eau gazeuse…)" style="margin-top:10px">
       </div>
 
       <!-- Activité -->
@@ -440,6 +478,12 @@ dialog p { font-size: 14px; color: var(--ink-2); margin: 0 0 14px; line-height: 
       </div>
 
       <div class="card">
+        <h2><span class="ic">🥤</span> Mes boissons</h2>
+        <div id="drink-manager"></div>
+        <p class="hint">Le volume sert au total bu de la journée. « Caféine » et « alcool » alimentent les statistiques dédiées.</p>
+      </div>
+
+      <div class="card">
         <h2><span class="ic">🏷️</span> Mes tags</h2>
         <div id="tag-manager"></div>
       </div>
@@ -479,6 +523,19 @@ dialog p { font-size: 14px; color: var(--ink-2); margin: 0 0 14px; line-height: 
     </div>
   </dialog>
 
+  <dialog id="qty-dlg">
+    <form class="dlg-body" id="qty-form" method="dialog">
+      <h3 id="qty-title">Quantité</h3>
+      <div class="chips" id="qty-presets" style="margin-bottom:12px"></div>
+      <div class="qty-field">
+        <input type="number" id="qty-input" inputmode="numeric" min="0" max="5000" step="10" aria-label="Quantité en millilitres">
+        <span>ml</span>
+      </div>
+      <button class="btn" id="qty-ok" type="submit" style="margin-top:14px">Valider</button>
+      <button class="btn sec" id="qty-cancel" type="button" style="margin-top:8px">Annuler</button>
+    </form>
+  </dialog>
+
   <dialog id="prompt-dlg">
     <form class="dlg-body" id="prompt-form" method="dialog">
       <h3 id="pr-title">Nouveau tag</h3>
@@ -509,8 +566,8 @@ dialog p { font-size: 14px; color: var(--ink-2); margin: 0 0 14px; line-height: 
 'use strict';
 
 const APP_NAME = 'Wellio';
-const APP_VERSION = '1.0.0';
-const SCHEMA_VERSION = 1;
+const APP_VERSION = '1.1.0';
+const SCHEMA_VERSION = 2;
 const LS_KEY = 'wellio.db.v1';
 const IDB_NAME = 'wellio';
 const IDB_STORE = 'kv';
@@ -526,6 +583,22 @@ const DEFAULT_TAGS = {
   pain: ['Nuque', 'Épaules', 'Dos', 'Lombaires', 'Hanches', 'Genoux', 'Jambes', 'Mâchoire'],
   numb: ['Main gauche', 'Main droite', 'Bras', 'Pieds', 'Jambes', 'Visage']
 };
+
+/* Boissons proposées par défaut. `ml` = volume d'un verre/tasse type ;
+   `caf` marque les boissons caféinées, `alc` les boissons alcoolisées. */
+const DEFAULT_DRINKS = [
+  { name: 'Eau', icon: '💧', ml: 250 },
+  { name: 'Eau pétillante', icon: '🫧', ml: 250 },
+  { name: 'Café', icon: '☕', ml: 100, caf: true },
+  { name: 'Thé', icon: '🍵', ml: 200, caf: true },
+  { name: 'Tisane', icon: '🌿', ml: 200 },
+  { name: 'Jus de fruit', icon: '🧃', ml: 200 },
+  { name: 'Soda', icon: '🥤', ml: 330 },
+  { name: 'Lait', icon: '🥛', ml: 200 },
+  { name: 'Bouillon', icon: '🍲', ml: 200 },
+  { name: 'Vin', icon: '🍷', ml: 125, alc: true },
+  { name: 'Bière', icon: '🍺', ml: 250, alc: true }
+];
 
 const MEALS = [
   { key: 'breakfast', label: 'Petit-déjeuner', icon: '🌅' },
@@ -554,6 +627,7 @@ function emptyEntry(date) {
   return {
     date,
     meals: { breakfast: { text: '', tags: [] }, lunch: { text: '', tags: [] }, dinner: { text: '', tags: [] }, bonus: { text: '', tags: [] } },
+    drinks: { items: [], note: '' }, // items : [{ name, ml, t: "HH:MM"|null }]
     steps: null,
     activity: { tags: [], minutes: null, note: '' },
     sleep: { hours: null, quality: null, pain: false, painTags: [], painNote: '', numbness: false, numbTags: [], numbNote: '' },
@@ -571,6 +645,7 @@ function freshDB() {
     createdAt: new Date().toISOString(),
     entries: {},
     tags: JSON.parse(JSON.stringify(DEFAULT_TAGS)),
+    drinks: JSON.parse(JSON.stringify(DEFAULT_DRINKS)),
     settings: { lastExportAt: null }
   };
 }
@@ -614,6 +689,14 @@ function migrate(data) {
   db.schemaVersion = SCHEMA_VERSION;
   db.tags = Object.assign({}, base.tags, data.tags || {});
   db.settings = Object.assign({}, base.settings, data.settings || {});
+  // liste des boissons : celle de l'utilisateur si elle existe, sinon celle par défaut
+  db.drinks = (Array.isArray(data.drinks) && data.drinks.length)
+    ? data.drinks.filter(d => d && d.name).map(d => ({
+      name: String(d.name), icon: d.icon || '🥛',
+      ml: Number(d.ml) > 0 ? Number(d.ml) : 200,
+      caf: !!d.caf, alc: !!d.alc
+    }))
+    : base.drinks;
   // normalise chaque entrée sur le schéma courant
   const norm = {};
   for (const [date, e] of Object.entries(db.entries)) {
@@ -621,6 +704,10 @@ function migrate(data) {
     const t = emptyEntry(date);
     deepMerge(t, e);
     t.date = date;
+    t.drinks.items = (t.drinks.items || []).filter(i => i && i.name).map(i => ({
+      name: String(i.name), ml: Number(i.ml) > 0 ? Number(i.ml) : 0,
+      t: typeof i.t === 'string' ? i.t : null
+    }));
     norm[date] = t;
   }
   db.entries = norm;
@@ -662,6 +749,7 @@ function isBlank(e) {
   if (e.mood.score != null || e.mood.note) return false;
   if (e.sleep.hours != null || e.sleep.quality != null || e.sleep.pain || e.sleep.numbness) return false;
   if (e.symptoms.tags.length || e.symptoms.note) return false;
+  if (e.drinks.items.length || e.drinks.note) return false;
   if (e.activity.tags.length || e.activity.note || e.activity.minutes != null) return false;
   for (const m of MEALS) { const x = e.meals[m.key]; if (x.text || x.tags.length) return false; }
   return true;
@@ -675,6 +763,7 @@ function completeness(e) {
   if (!e) return 0;
   let n = 0;
   if (MEALS.some(m => e.meals[m.key].text || e.meals[m.key].tags.length)) n++;
+  if (e.drinks.items.length || e.drinks.note) n++;
   if (e.steps != null) n++;
   if (e.activity.tags.length || e.activity.minutes != null || e.activity.note) n++;
   if (e.sleep.hours != null || e.sleep.quality != null) n++;
@@ -682,6 +771,43 @@ function completeness(e) {
   if (e.stress != null) n++;
   if (e.mood.score != null) n++;
   return n;
+}
+
+/* ---------- boissons ---------- */
+function drinkDef(name) {
+  return DB.drinks.find(d => d.name === name) || { name, icon: '🥛', ml: 0, caf: false, alc: false };
+}
+/** Totaux du jour : volume, nombre de verres, caféine, alcool, heure du dernier café/thé. */
+function drinkStats(e) {
+  const items = (e && e.drinks && e.drinks.items) || [];
+  let ml = 0, caf = 0, alc = 0, lastCaf = null;
+  for (const it of items) {
+    const def = drinkDef(it.name);
+    ml += Number(it.ml) || def.ml || 0;
+    if (def.caf) {
+      caf++;
+      if (it.t) { const h = hhmmToHours(it.t); if (lastCaf === null || h > lastCaf) lastCaf = h; }
+    }
+    if (def.alc) alc++;
+  }
+  return { ml, count: items.length, caf, alc, lastCaf };
+}
+function hhmmToHours(s) {
+  const m = /^(\d{1,2}):(\d{2})$/.exec(s || '');
+  return m ? Number(m[1]) + Number(m[2]) / 60 : null;
+}
+function hoursToHHMM(h) {
+  if (h === null || h === undefined) return '—';
+  const hh = Math.floor(h), mm = Math.round((h - hh) * 60);
+  return `${hh}h${String(mm).padStart(2, '0')}`;
+}
+function fmtVolume(ml) {
+  if (!ml) return '0 ml';
+  return ml >= 1000 ? (ml / 1000).toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) + ' L' : Math.round(ml) + ' ml';
+}
+function nowHHMM() {
+  const d = new Date();
+  return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
 /* ---------- dates ---------- */
@@ -760,6 +886,52 @@ function promptDlg(title, placeholder, okLabel) {
     setTimeout(() => { try { input.focus(); } catch (e) { } }, 60);
   });
 }
+/** Choix d'une quantité en ml : raccourcis courants + saisie libre. */
+const QTY_PRESETS = [100, 150, 200, 250, 330, 500, 750, 1000];
+function promptQty(title, currentMl) {
+  return new Promise(resolve => {
+    const dlg = $('#qty-dlg'), form = $('#qty-form'), input = $('#qty-input');
+    $('#qty-title').textContent = title;
+    input.value = currentMl > 0 ? currentMl : '';
+    let done = false;
+    const finish = v => {
+      if (done) return;
+      done = true;
+      form.onsubmit = null; $('#qty-cancel').onclick = null; dlg.onclose = null;
+      if (dlg.open) dlg.close();
+      resolve(v);
+    };
+    $('#qty-presets').replaceChildren(...QTY_PRESETS.map(ml => el('button', {
+      type: 'button', class: 'chip' + (ml === currentMl ? ' on' : ''),
+      text: ml >= 1000 ? (ml / 1000).toLocaleString('fr-FR') + ' L' : ml + ' ml',
+      onclick: () => { haptic(); finish(ml); }
+    })));
+    form.onsubmit = ev => {
+      ev.preventDefault();
+      const v = parseInt(input.value, 10);
+      finish(Number.isFinite(v) && v >= 0 ? v : null);
+    };
+    $('#qty-cancel').onclick = () => finish(null);
+    dlg.onclose = () => finish(null);
+    dlg.showModal();
+  });
+}
+
+/** Appui long (≈450 ms) sans casser le clic simple. */
+function onLongPress(node, handler) {
+  let timer = null, fired = false;
+  const start = () => {
+    fired = false;
+    clearTimeout(timer);
+    timer = setTimeout(() => { fired = true; haptic(); handler(); }, 450);
+  };
+  const cancel = () => clearTimeout(timer);
+  node.addEventListener('pointerdown', start);
+  ['pointerup', 'pointercancel', 'pointerleave', 'pointermove'].forEach(ev => node.addEventListener(ev, cancel));
+  node.addEventListener('contextmenu', ev => ev.preventDefault());
+  return () => fired; // à consulter dans le clic pour l'ignorer après un appui long
+}
+
 function haptic() { if (navigator.vibrate) { try { navigator.vibrate(8); } catch (e) {} } }
 
 
@@ -862,6 +1034,100 @@ function renderChips(container, kind, selected, onChange, tone, sortSelectedFirs
   box.replaceChildren(frag);
 }
 
+/* ---------- Boissons ---------- */
+const HYDRA_SCALE = 2000; // la barre est pleine à 2 L, le repère est posé à 1,5 L
+
+function addDrink(name, ml) {
+  const def = drinkDef(name);
+  const e = ensureEntry(selDate);
+  // l'heure est mémorisée sans être affichée : elle sert à la statistique
+  // « heure du dernier café » et n'a de sens que pour la journée en cours
+  e.drinks.items.push({ name, ml: ml == null ? def.ml : ml, t: selDate === todayISO() ? nowHHMM() : null });
+  haptic(); renderDrinks(); touched();
+}
+/** Appui long sur une pastille : on choisit la quantité avant d'ajouter. */
+async function addDrinkCustom(name) {
+  const def = drinkDef(name);
+  const ml = await promptQty(`${def.icon} ${name} — quantité`, def.ml);
+  if (ml === null) return;
+  addDrink(name, ml);
+}
+async function editDrinkQty(index) {
+  const e = ensureEntry(selDate);
+  const it = e.drinks.items[index];
+  if (!it) return;
+  const def = drinkDef(it.name);
+  const ml = await promptQty(`${def.icon} ${it.name} — quantité`, Number(it.ml) || def.ml);
+  if (ml === null) return;
+  it.ml = ml;
+  renderDrinks(); touched();
+}
+function removeDrinkAt(index) {
+  const e = ensureEntry(selDate);
+  e.drinks.items.splice(index, 1);
+  haptic(); renderDrinks(); touched();
+}
+
+function renderDrinks() {
+  const e = getEntry(selDate) || emptyEntry(selDate);
+  const items = e.drinks.items;
+  const st = drinkStats(e);
+
+  $('#drink-total').textContent = fmtVolume(st.ml);
+  $('#drink-bar').style.width = Math.min(100, st.ml / HYDRA_SCALE * 100) + '%';
+
+  // compteurs : un tap = un verre de plus
+  const counts = new Map();
+  items.forEach(i => counts.set(i.name, (counts.get(i.name) || 0) + 1));
+  const frag = document.createDocumentFragment();
+  DB.drinks.forEach(d => {
+    const n = counts.get(d.name) || 0;
+    const chip = el('button', {
+      type: 'button', class: 'chip drink' + (n ? ' on' : ''),
+      'aria-label': `Ajouter ${d.name.toLowerCase()} (${d.ml} ml). Appui long pour choisir la quantité.`
+    }, [
+      el('span', { text: d.icon + ' ' + d.name }),
+      n ? el('span', { class: 'cnt', text: String(n) }) : null
+    ]);
+    const wasLong = onLongPress(chip, () => addDrinkCustom(d.name));
+    chip.addEventListener('click', () => { if (!wasLong()) addDrink(d.name); });
+    frag.appendChild(chip);
+  });
+  frag.appendChild(el('button', {
+    type: 'button', class: 'chip add', text: '+ ajouter',
+    onclick: async () => {
+      const v = await promptDlg('Nouvelle boisson', 'Nom (ex. Kéfir)');
+      if (!v) return;
+      if (!DB.drinks.some(d => d.name.toLowerCase() === v.toLowerCase())) DB.drinks.push({ name: v, icon: '🥛', ml: 200, caf: false, alc: false });
+      addDrink(v);
+      renderDrinks();
+      toast('Ajoutée — volume et type modifiables dans Données');
+    }
+  }));
+  $('#drink-chips').replaceChildren(frag);
+
+  // récapitulatif : une ligne par verre, avec sa quantité modifiable
+  const rows = items.map((it, idx) => {
+    const def = drinkDef(it.name);
+    const ml = Number(it.ml) || def.ml || 0;
+    return el('div', { class: 'drink-row' }, [
+      el('span', { class: 'name', text: `${def.icon} ${it.name}` }),
+      el('button', {
+        type: 'button', class: 'qty', text: fmtVolume(ml),
+        'aria-label': `Modifier la quantité (${ml} ml)`, onclick: () => editDrinkQty(idx)
+      }),
+      el('button', {
+        class: 'minus', type: 'button', text: '−',
+        'aria-label': `Retirer ce ${it.name.toLowerCase()}`, onclick: () => removeDrinkAt(idx)
+      })
+    ]);
+  });
+  if (items.length) {
+    rows.push(el('p', { class: 'hint', text: 'Touche une quantité pour la modifier. Appui long sur une boisson pour choisir la quantité dès l\'ajout.' }));
+  }
+  $('#drink-log').replaceChildren(...rows);
+}
+
 /* ---------- Formulaire du jour ---------- */
 let flagTimer;
 function touched() {
@@ -903,6 +1169,9 @@ function bindForm() {
   MEALS.forEach(m => {
     $('#f-meal-' + m.key).addEventListener('input', ev => { E().meals[m.key].text = ev.target.value; touched(); });
   });
+
+  // Boissons
+  $('#f-drink-note').addEventListener('input', ev => { E().drinks.note = ev.target.value; touched(); });
 
   // Pas
   const steps = $('#f-steps');
@@ -1017,6 +1286,9 @@ function renderDay() {
     renderChips('#tags-meal-' + m.key, 'food', ensureEntry(selDate).meals[m.key].tags, touched, 'food', true);
   });
 
+  renderDrinks();
+  $('#f-drink-note').value = e.drinks.note || '';
+
   $('#f-steps').value = e.steps == null ? '' : e.steps;
   renderChips('#tags-activity', 'activity', ensureEntry(selDate).activity.tags, touched, 'act');
   $('#f-actmin').value = e.activity.minutes == null ? 0 : e.activity.minutes;
@@ -1063,6 +1335,10 @@ const VARS = [
   { key: 'sleepHours', label: 'Sommeil (h)', short: 'Sommeil', subj: 'le sommeil', unit: 'h', dec: 1, get: e => e.sleep.hours },
   { key: 'sleepQuality', label: 'Qualité du sommeil', short: 'Qualité sommeil', subj: 'la qualité du sommeil', unit: '/5', dec: 1, get: e => e.sleep.quality },
   { key: 'steps', label: 'Nombre de pas', short: 'Pas', subj: 'le nombre de pas', unit: '', dec: 0, get: e => e.steps },
+  { key: 'hydration', label: 'Volume bu (L)', short: 'Boissons', subj: 'le volume bu', unit: ' L', dec: 1, get: e => e.drinks.items.length ? drinkStats(e).ml / 1000 : null },
+  { key: 'caffeine', label: 'Boissons caféinées', short: 'Caféine', subj: 'le nombre de boissons caféinées', unit: '', dec: 1, get: e => e.drinks.items.length ? drinkStats(e).caf : null },
+  { key: 'alcohol', label: "Verres d'alcool", short: 'Alcool', subj: "le nombre de verres d'alcool", unit: '', dec: 1, get: e => e.drinks.items.length ? drinkStats(e).alc : null },
+  { key: 'lastCaf', label: 'Heure du dernier café / thé', short: 'Dernier café', subj: "l'heure du dernier café", unit: '', dec: 1, get: e => drinkStats(e).lastCaf },
   { key: 'activityMin', label: "Durée d'activité (min)", short: 'Activité', subj: "la durée d'activité", unit: ' min', dec: 0, get: e => e.activity.minutes },
   { key: 'stress', label: 'Niveau de stress', short: 'Stress', subj: 'le stress', unit: '/10', dec: 1, get: e => e.stress },
   { key: 'mood', label: 'Humeur', short: 'Humeur', subj: "l'humeur", unit: '/5', dec: 1, get: e => e.mood.score },
@@ -1083,6 +1359,11 @@ const causePhrase = V => V.bool ? V.cause : `${V.subj} augmente`;
 /** « le stress a tendance à diminuer » / « les douleurs sont plus fréquentes ». */
 const effectPhrase = (V, r) => V.bool ? (r > 0 ? V.more : V.less) : `${V.subj} a tendance à ${r > 0 ? 'augmenter' : 'diminuer'}`;
 const VAR_BY_KEY = Object.fromEntries(VARS.map(v => [v.key, v]));
+
+/* Paires liées par construction (leur corrélation n'apprend rien) :
+   plus de cafés ⇒ dernier café plus tard, plus de verres ⇒ plus de volume bu. */
+const REDUNDANT_PAIRS = new Set(['caffeine|lastCaf', 'caffeine|hydration', 'alcohol|hydration']);
+const isRedundant = (a, b) => REDUNDANT_PAIRS.has([a, b].sort().join('|'));
 
 let period = 90;
 let lag = 0;
@@ -1178,6 +1459,7 @@ function niceTicks(lo, hi, count) {
 function tickLabel(V, v) {
   if (V.bool) return v > 0.5 ? 'oui' : 'non';
   if (V.key === 'steps') return Math.abs(v) >= 1000 ? (v / 1000).toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + 'k' : String(Math.round(v));
+  if (V.key === 'lastCaf') return Math.round(v) + 'h';
   let r = Math.round(v * 100) / 100;
   if (r === 0) r = 0; // évite « -0 »
   return r.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
@@ -1200,13 +1482,20 @@ function mulberry(a) {
   };
 }
 
+/** Nombre au format français (virgule décimale). */
+function nf(v, dec) {
+  return Number(v).toLocaleString('fr-FR', { minimumFractionDigits: dec, maximumFractionDigits: dec });
+}
+
 function fmtVal(key, v) {
   if (v === null || v === undefined) return '—';
   const V = VAR_BY_KEY[key];
   if (V.bool) return Math.round(v * 100) + ' %';
   if (key === 'steps') return Math.round(v).toLocaleString('fr-FR');
   if (key === 'sleepHours') return fmtHours(Math.round(v * 4) / 4);
-  return v.toFixed(V.dec) + V.unit;
+  if (key === 'hydration') return fmtVolume(Math.round(v * 1000));
+  if (key === 'lastCaf') return hoursToHHMM(Math.round(v * 4) / 4);
+  return nf(v, V.dec) + V.unit;
 }
 
 /* ---------- rendu ---------- */
@@ -1229,7 +1518,9 @@ function renderKpis(dates) {
     { k: 'Jours renseignés', v: String(filled.length), s: period ? `sur ${period} j` : '' },
     { k: 'Sommeil moyen', v: avg('sleepHours') === null ? '—' : fmtHours(Math.round(avg('sleepHours') * 4) / 4), s: '' },
     { k: 'Pas / jour', v: avg('steps') === null ? '—' : Math.round(avg('steps')).toLocaleString('fr-FR'), s: '' },
-    { k: 'Stress moyen', v: avg('stress') === null ? '—' : avg('stress').toFixed(1), s: '/10' }
+    { k: 'Stress moyen', v: avg('stress') === null ? '—' : nf(avg('stress'), 1), s: '/10' },
+    { k: 'Boissons / jour', v: avg('hydration') === null ? '—' : fmtVolume(Math.round(avg('hydration') * 1000)), s: '' },
+    { k: 'Caféine / jour', v: avg('caffeine') === null ? '—' : nf(avg('caffeine'), 1), s: '' }
   ];
   $('#kpis').replaceChildren(...items.map(i => el('div', { class: 'kpi' }, [
     el('div', { class: 'v' }, [document.createTextNode(i.v), i.s ? el('small', { text: ' ' + i.s }) : null]),
@@ -1245,6 +1536,7 @@ function renderTopCorrelations() {
       for (let j = 0; j < VARS.length; j++) {
         if (i === j) continue;
         if (L === 0 && j < i) continue; // symétrique
+        if (isRedundant(VARS[i].key, VARS[j].key)) continue;
         const res = pearson(pairs(VARS[i].key, VARS[j].key, L));
         if (!res || res.n < 7) continue;
         if (Math.abs(res.r) < 0.25) continue;
@@ -1253,7 +1545,21 @@ function renderTopCorrelations() {
     }
   }
   found.sort((a, b) => Math.abs(b.r) - Math.abs(a.r));
-  const top = found.slice(0, 8);
+  // on limite chaque variable à 3 apparitions : sinon une paire très liée
+  // (sommeil / qualité / stress) monopolise la liste et masque les autres pistes
+  const used = new Map();
+  const seen = new Set();
+  const top = [];
+  for (const c of found) {
+    const pairKey = [c.x.key, c.y.key].sort().join('|');
+    if (seen.has(pairKey + c.lag)) continue;
+    if ((used.get(c.x.key) || 0) >= 3 || (used.get(c.y.key) || 0) >= 3) continue;
+    used.set(c.x.key, (used.get(c.x.key) || 0) + 1);
+    used.set(c.y.key, (used.get(c.y.key) || 0) + 1);
+    seen.add(pairKey + c.lag);
+    top.push(c);
+    if (top.length === 8) break;
+  }
 
   if (!top.length) {
     box.replaceChildren(el('div', { class: 'empty' }, [
@@ -1269,7 +1575,7 @@ function renderTopCorrelations() {
       class: 'corr-item', type: 'button', style: 'width:100%;text-align:left',
       onclick: () => { varX = c.x.key; varY = c.y.key; lag = c.lag; syncStatControls(); renderScatter(); $('#scatter-box').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
     }, [
-      el('span', { class: 'rbadge', text: (c.r > 0 ? '+' : '') + c.r.toFixed(2), style: `background:${corrColor(c.r)}` }),
+      el('span', { class: 'rbadge', text: (c.r > 0 ? '+' : '') + nf(c.r, 2), style: `background:${corrColor(c.r)}` }),
       el('span', { class: 'txt' }, [
         document.createTextNode(`Quand ${causePhrase(c.x)}, ${effectPhrase(c.y, c.r)}${when}.`),
         el('small', { text: `${strengthLabel(c.r)} · ${c.n} jours comparés · ${fiab}` })
@@ -1352,7 +1658,7 @@ function renderScatter() {
 
   const caption = res
     ? el('p', { class: 'hint', style: 'margin-top:4px' }, [
-      el('strong', { text: `r = ${res.r >= 0 ? '+' : ''}${res.r.toFixed(2)}` }),
+      el('strong', { text: `r = ${res.r >= 0 ? '+' : ''}${nf(res.r, 2)}` }),
       document.createTextNode(` · ${strengthLabel(res.r)} · ${res.n} jours · ${res.p < 0.05 ? 'peu probable au hasard' : 'peut être dû au hasard'}`)
     ])
     : el('p', { class: 'hint', text: 'Variation insuffisante pour calculer une corrélation.' });
@@ -1370,6 +1676,7 @@ function allTagsUsed() {
     const e = DB.entries[d]; if (!e) continue;
     const set = new Set();
     MEALS.forEach(m => e.meals[m.key].tags.forEach(t => set.add('🍽 ' + t)));
+    e.drinks.items.forEach(i => set.add('🥤 ' + i.name));
     e.activity.tags.forEach(t => set.add('🚶 ' + t));
     e.symptoms.tags.forEach(t => set.add('🩺 ' + t));
     for (const t of set) {
@@ -1418,7 +1725,7 @@ function renderTagEffects() {
     const pct = Math.abs(r.diff) / maxAbs * 100;
     const sign = r.diff > 0 ? '+' : '';
     return el('div', { class: 'corr-item' }, [
-      el('span', { class: 'rbadge', text: sign + (T.bool ? Math.round(r.diff * 100) + '%' : r.diff.toFixed(T.dec)), style: `background:${corrColor(r.diff)}` }),
+      el('span', { class: 'rbadge', text: sign + (T.bool ? Math.round(r.diff * 100) + '%' : nf(r.diff, T.dec)), style: `background:${corrColor(r.diff)}` }),
       el('span', { class: 'txt' }, [
         document.createTextNode(`${r.tag}${r.lag ? ' → lendemain' : ''}`),
         el('small', { text: `${T.short} : ${fmtVal(target, r.mw)} avec · ${fmtVal(target, r.mo)} sans · ${r.n} jours` }),
@@ -1456,11 +1763,11 @@ function renderWeekly() {
     const s = cell(ds, 'sleepHours'), p = cell(ds, 'steps'), st = cell(ds, 'stress'), m = cell(ds, 'mood'), sy = cell(ds, 'symptomCount');
     return el('tr', {}, [
       el('td', { text: 'sem. du ' + shortDate(k) }),
-      el('td', { text: s === null ? '—' : (Math.round(s * 10) / 10).toFixed(1) }),
+      el('td', { text: s === null ? '—' : nf(s, 1) }),
       el('td', { text: p === null ? '—' : Math.round(p).toLocaleString('fr-FR') }),
-      el('td', { text: st === null ? '—' : st.toFixed(1) }),
-      el('td', { text: m === null ? '—' : m.toFixed(1) }),
-      el('td', { text: sy === null ? '—' : sy.toFixed(1) })
+      el('td', { text: st === null ? '—' : nf(st, 1) }),
+      el('td', { text: m === null ? '—' : nf(m, 1) }),
+      el('td', { text: sy === null ? '—' : nf(sy, 1) })
     ]);
   });
   const tbl = el('table', { class: 'tbl' }, [el('thead', {}, head), el('tbody', {}, body)]);
@@ -1532,9 +1839,28 @@ function csvCell(v) {
 }
 const CSV_SEP = ';'; // Excel/Numbers en français
 
+/** Les 7 colonnes « boissons » d'une journée. */
+function drinkCsvCells(e) {
+  const st = drinkStats(e);
+  const counts = new Map();
+  e.drinks.items.forEach(i => counts.set(i.name, (counts.get(i.name) || 0) + 1));
+  const detail = [...counts.entries()].map(([n, c]) => `${n} x${c}`).join(', ');
+  return [
+    e.drinks.items.length ? st.ml : null,
+    e.drinks.items.length ? st.count : null,
+    detail,
+    e.drinks.items.length ? st.caf : null,
+    e.drinks.items.length ? st.alc : null,
+    st.lastCaf === null ? '' : hoursToHHMM(st.lastCaf).replace('h', ':'),
+    e.drinks.note
+  ];
+}
+
 function exportCSVWide() {
   const head = ['date', 'jour_semaine', 'petit_dejeuner', 'petit_dejeuner_tags', 'dejeuner', 'dejeuner_tags',
-    'diner', 'diner_tags', 'bonus', 'bonus_tags', 'pas', 'activites', 'activite_minutes', 'activite_note',
+    'diner', 'diner_tags', 'bonus', 'bonus_tags',
+    'boissons_total_ml', 'boissons_nb', 'boissons_detail', 'cafeine_nb', 'alcool_nb', 'dernier_cafe', 'boissons_note',
+    'pas', 'activites', 'activite_minutes', 'activite_note',
     'sommeil_heures', 'sommeil_qualite_1_5', 'douleurs', 'douleurs_zones', 'douleurs_note',
     'engourdissements', 'engourdissements_zones', 'engourdissements_note',
     'symptomes', 'symptomes_nombre', 'symptomes_note', 'stress_0_10', 'humeur_1_5', 'humeur_note', 'modifie_le'];
@@ -1548,6 +1874,7 @@ function exportCSVWide() {
       m('lunch').text, m('lunch').tags.join(', '),
       m('dinner').text, m('dinner').tags.join(', '),
       m('bonus').text, m('bonus').tags.join(', '),
+      ...drinkCsvCells(e),
       e.steps, e.activity.tags.join(', '), e.activity.minutes, e.activity.note,
       e.sleep.hours, e.sleep.quality,
       e.sleep.pain ? 'oui' : 'non', e.sleep.painTags.join(', '), e.sleep.painNote,
@@ -1568,6 +1895,9 @@ function exportCSVLong() {
       push(d, 'repas', m.key + '_texte', e.meals[m.key].text);
       e.meals[m.key].tags.forEach(t => push(d, 'repas', m.key + '_tag', t));
     });
+    e.drinks.items.forEach(i => push(d, 'boissons', i.name, `${i.ml || drinkDef(i.name).ml} ml${i.t ? ' à ' + i.t : ''}`));
+    push(d, 'boissons', 'total_ml', e.drinks.items.length ? drinkStats(e).ml : null);
+    push(d, 'boissons', 'note', e.drinks.note);
     push(d, 'activite', 'pas', e.steps);
     push(d, 'activite', 'minutes', e.activity.minutes);
     push(d, 'activite', 'note', e.activity.note);
@@ -1651,8 +1981,58 @@ function renderTagManager() {
   box.replaceChildren(...parts);
 }
 
+/* ---------- gestion des boissons ---------- */
+function renderDrinkManager() {
+  const box = $('#drink-manager');
+  const rows = DB.drinks.map((d, idx) => el('div', { class: 'drink-edit' }, [
+    el('span', { class: 'name', text: `${d.icon} ${d.name}` }),
+    el('input', {
+      type: 'number', inputmode: 'numeric', min: '0', max: '2000', step: '25', value: String(d.ml),
+      'aria-label': `Volume d'un ${d.name.toLowerCase()} en ml`,
+      oninput: ev => {
+        const v = parseInt(ev.target.value, 10);
+        d.ml = Number.isFinite(v) && v >= 0 ? v : 0;
+        persist(); renderDrinks();
+      }
+    }),
+    el('span', { style: 'font-size:12px;color:var(--ink-3)', text: 'ml' }),
+    el('button', {
+      type: 'button', class: 'chip' + (d.caf ? ' on' : ''), text: '☕', title: 'Boisson caféinée', 'aria-label': 'Caféinée',
+      'aria-pressed': String(!!d.caf),
+      onclick: () => { d.caf = !d.caf; persist(true); renderDrinkManager(); renderDrinks(); }
+    }),
+    el('button', {
+      type: 'button', class: 'chip' + (d.alc ? ' on' : ''), text: '🍷', title: 'Boisson alcoolisée', 'aria-label': 'Alcoolisée',
+      'aria-pressed': String(!!d.alc),
+      onclick: () => { d.alc = !d.alc; persist(true); renderDrinkManager(); renderDrinks(); }
+    }),
+    el('button', {
+      type: 'button', class: 'del', text: '×', 'aria-label': `Supprimer ${d.name}`,
+      onclick: async () => {
+        const ok = await confirmDlg('Supprimer cette boisson ?', `« ${d.name} » ne sera plus proposée. Les journées déjà enregistrées ne changent pas.`, 'Supprimer');
+        if (!ok) return;
+        DB.drinks.splice(idx, 1);
+        persist(true); renderDrinkManager(); renderDrinks();
+      }
+    })
+  ]));
+  rows.push(el('div', { class: 'chips', style: 'margin-top:10px' }, [
+    el('button', {
+      type: 'button', class: 'chip add', text: '+ ajouter une boisson',
+      onclick: async () => {
+        const v = await promptDlg('Nouvelle boisson', 'Nom (ex. Kéfir)');
+        if (!v || DB.drinks.some(d => d.name.toLowerCase() === v.toLowerCase())) return;
+        DB.drinks.push({ name: v, icon: '🥛', ml: 200, caf: false, alc: false });
+        persist(true); renderDrinkManager(); renderDrinks();
+      }
+    })
+  ]));
+  box.replaceChildren(...rows);
+}
+
 /* ---------- infos & bannière ---------- */
 async function renderDataScreen() {
+  renderDrinkManager();
   renderTagManager();
 
   const n = Object.keys(DB.entries).length;
