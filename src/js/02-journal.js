@@ -279,6 +279,12 @@ function bindForm() {
     if (!e.sleep.numbness) { e.sleep.numbTags.length = 0; e.sleep.numbNote = ''; $('#f-numb-note').value = ''; }
     haptic(); renderDay(); touched();
   });
+  $('#f-dental').addEventListener('click', () => {
+    const e = E(); e.sleep.dental = !e.sleep.dental;
+    if (!e.sleep.dental) { e.sleep.dentalTags.length = 0; e.sleep.dentalNote = ''; $('#f-dental-note').value = ''; }
+    haptic(); renderDay(); touched();
+  });
+  $('#f-dental-note').addEventListener('input', ev => { E().sleep.dentalNote = ev.target.value; touched(); });
   $('#f-pain-note').addEventListener('input', ev => { E().sleep.painNote = ev.target.value; touched(); });
   $('#f-numb-note').addEventListener('input', ev => { E().sleep.numbNote = ev.target.value; touched(); });
 
@@ -373,6 +379,13 @@ function renderDay() {
   if (e.sleep.numbness) {
     renderChips('#tags-numb', 'numb', ensureEntry(selDate).sleep.numbTags, touched, 'sym');
     $('#f-numb-note').value = e.sleep.numbNote || '';
+  }
+
+  $('#f-dental').setAttribute('aria-pressed', String(!!e.sleep.dental));
+  $('#dental-details').hidden = !e.sleep.dental;
+  if (e.sleep.dental) {
+    renderChips('#tags-dental', 'dental', ensureEntry(selDate).sleep.dentalTags, touched, 'sym');
+    $('#f-dental-note').value = e.sleep.dentalNote || '';
   }
 
   renderChips('#tags-symptom', 'symptom', ensureEntry(selDate).symptoms.tags, touched, 'sym');

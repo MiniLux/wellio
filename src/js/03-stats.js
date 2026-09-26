@@ -2,7 +2,7 @@
    Wellio — écran Statistiques (orienté corrélations)
    ======================================================================= */
 
-const hasSleep = e => e.sleep.hours != null || e.sleep.quality != null || e.sleep.pain || e.sleep.numbness;
+const hasSleep = e => e.sleep.hours != null || e.sleep.quality != null || e.sleep.pain || e.sleep.numbness || e.sleep.dental;
 
 const VARS = [
   { key: 'sleepHours', label: 'Sommeil (h)', short: 'Sommeil', subj: 'le sommeil', unit: 'h', dec: 1, get: e => e.sleep.hours },
@@ -20,6 +20,11 @@ const VARS = [
     key: 'pain', label: 'Douleurs nocturnes', short: 'Douleurs', subj: 'les douleurs nocturnes', unit: '', dec: 2, bool: true,
     cause: 'il y a des douleurs nocturnes', more: 'les douleurs nocturnes sont plus fréquentes', less: 'les douleurs nocturnes sont plus rares',
     get: e => hasSleep(e) ? (e.sleep.pain ? 1 : 0) : null
+  },
+  {
+    key: 'dental', label: 'Appareil dentaire', short: 'Appareil dentaire', subj: "l'appareil dentaire", unit: '', dec: 2, bool: true,
+    cause: "l'appareil dentaire est porté", more: "l'appareil dentaire est porté plus souvent", less: "l'appareil dentaire est porté moins souvent",
+    get: e => hasSleep(e) ? (e.sleep.dental ? 1 : 0) : null
   },
   {
     key: 'numbness', label: 'Engourdissements', short: 'Engourdis.', subj: 'les engourdissements', unit: '', dec: 2, bool: true,
@@ -352,6 +357,7 @@ function allTagsUsed() {
     e.drinks.items.forEach(i => set.add('🥤 ' + i.name));
     e.activity.tags.forEach(t => set.add('🚶 ' + t));
     e.symptoms.tags.forEach(t => set.add('🩺 ' + t));
+    e.sleep.dentalTags.forEach(t => set.add('🦷 ' + t));
     for (const t of set) {
       if (!counts.has(t)) counts.set(t, []);
       counts.get(t).push(d);

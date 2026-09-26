@@ -6,7 +6,7 @@
 'use strict';
 
 const APP_NAME = 'Wellio';
-const APP_VERSION = '1.1.0';
+const APP_VERSION = '1.2.0';
 const SCHEMA_VERSION = 2;
 const LS_KEY = 'wellio.db.v1';
 const IDB_NAME = 'wellio';
@@ -21,7 +21,8 @@ const DEFAULT_TAGS = {
     'Douleurs articulaires', 'Douleurs musculaires', 'Mal de dos', 'Vertiges',
     'Brouillard mental', 'Palpitations', 'Crampes', 'Démangeaisons', 'Essoufflement', 'Yeux secs'],
   pain: ['Nuque', 'Épaules', 'Dos', 'Lombaires', 'Hanches', 'Genoux', 'Jambes', 'Mâchoire'],
-  numb: ['Main gauche', 'Main droite', 'Bras', 'Pieds', 'Jambes', 'Visage']
+  numb: ['Main gauche', 'Main droite', 'Bras', 'Pieds', 'Jambes', 'Visage'],
+  dental: ['Aucune gêne', 'Gêne', 'Douleur à la mâchoire', 'Serrement des dents', 'Retiré dans la nuit', 'Salivation']
 };
 
 /* Boissons proposées par défaut. `ml` = volume d'un verre/tasse type ;
@@ -70,7 +71,7 @@ function emptyEntry(date) {
     drinks: { items: [], note: '' }, // items : [{ name, ml, t: "HH:MM"|null }]
     steps: null,
     activity: { tags: [], minutes: null, note: '' },
-    sleep: { hours: null, quality: null, pain: false, painTags: [], painNote: '', numbness: false, numbTags: [], numbNote: '' },
+    sleep: { hours: null, quality: null, pain: false, painTags: [], painNote: '', numbness: false, numbTags: [], numbNote: '', dental: false, dentalTags: [], dentalNote: '' },
     symptoms: { tags: [], note: '' },
     stress: null,
     mood: { score: null, note: '' },
@@ -187,7 +188,7 @@ function isBlank(e) {
   if (!e) return true;
   if (e.steps != null || e.stress != null) return false;
   if (e.mood.score != null || e.mood.note) return false;
-  if (e.sleep.hours != null || e.sleep.quality != null || e.sleep.pain || e.sleep.numbness) return false;
+  if (e.sleep.hours != null || e.sleep.quality != null || e.sleep.pain || e.sleep.numbness || e.sleep.dental) return false;
   if (e.symptoms.tags.length || e.symptoms.note) return false;
   if (e.drinks.items.length || e.drinks.note) return false;
   if (e.activity.tags.length || e.activity.note || e.activity.minutes != null) return false;

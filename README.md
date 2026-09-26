@@ -1,7 +1,8 @@
 # Wellio — journal de santé (PWA)
 
 Application web installable sur iPhone pour noter chaque jour : repas, boissons, pas,
-activités, sommeil (durée, qualité, douleurs, engourdissements), symptômes, stress et humeur.
+activités, sommeil (durée, qualité, douleurs, engourdissements, appareil dentaire),
+symptômes, stress et humeur.
 Calendrier mensuel, écran de statistiques orienté **corrélations**, export/import complet
 des données.
 
@@ -134,7 +135,7 @@ récente de chaque journée gagne) ou **remplacer**.
 **Analyse :** deux exports CSV (séparateur `;`, encodage UTF-8 avec BOM → s'ouvrent
 directement dans Numbers/Excel) :
 
-- *large* : une ligne par jour, 36 colonnes ;
+- *large* : une ligne par jour, 39 colonnes ;
 - *détaillé* : une ligne par champ (`date;categorie;champ;valeur`), pratique pour un
   tableau croisé dynamique ou pandas.
 

@@ -69,6 +69,7 @@ function exportCSVWide() {
     'pas', 'activites', 'activite_minutes', 'activite_note',
     'sommeil_heures', 'sommeil_qualite_1_5', 'douleurs', 'douleurs_zones', 'douleurs_note',
     'engourdissements', 'engourdissements_zones', 'engourdissements_note',
+    'appareil_dentaire', 'appareil_dentaire_ressenti', 'appareil_dentaire_note',
     'symptomes', 'symptomes_nombre', 'symptomes_note', 'stress_0_10', 'humeur_1_5', 'humeur_note', 'modifie_le'];
   const lines = [head.join(CSV_SEP)];
   for (const d of Object.keys(DB.entries).sort()) {
@@ -85,6 +86,7 @@ function exportCSVWide() {
       e.sleep.hours, e.sleep.quality,
       e.sleep.pain ? 'oui' : 'non', e.sleep.painTags.join(', '), e.sleep.painNote,
       e.sleep.numbness ? 'oui' : 'non', e.sleep.numbTags.join(', '), e.sleep.numbNote,
+      e.sleep.dental ? 'oui' : 'non', e.sleep.dentalTags.join(', '), e.sleep.dentalNote,
       e.symptoms.tags.join(', '), e.symptoms.tags.length, e.symptoms.note,
       e.stress, e.mood.score, e.mood.note, e.updatedAt
     ].map(csvCell).join(CSV_SEP));
@@ -116,6 +118,9 @@ function exportCSVLong() {
     push(d, 'sommeil', 'engourdissements', e.sleep.numbness ? 'oui' : null);
     e.sleep.numbTags.forEach(t => push(d, 'sommeil', 'engourdissement_zone', t));
     push(d, 'sommeil', 'engourdissement_note', e.sleep.numbNote);
+    push(d, 'sommeil', 'appareil_dentaire', e.sleep.dental ? 'oui' : null);
+    e.sleep.dentalTags.forEach(t => push(d, 'sommeil', 'appareil_dentaire_ressenti', t));
+    push(d, 'sommeil', 'appareil_dentaire_note', e.sleep.dentalNote);
     e.symptoms.tags.forEach(t => push(d, 'symptomes', 'tag', t));
     push(d, 'symptomes', 'note', e.symptoms.note);
     push(d, 'etat', 'stress', e.stress);
@@ -155,7 +160,7 @@ function applyImport(incoming, mode) {
 }
 
 /* ---------- gestion des tags ---------- */
-const TAG_KIND_LABELS = { food: '🍽 Repas', activity: '🚶 Activités', symptom: '🩺 Symptômes', pain: '💢 Zones de douleur', numb: '🌀 Engourdissements' };
+const TAG_KIND_LABELS = { food: '🍽 Repas', activity: '🚶 Activités', symptom: '🩺 Symptômes', pain: '💢 Zones de douleur', numb: '🌀 Engourdissements', dental: '🦷 Appareil dentaire' };
 
 function renderTagManager() {
   const box = $('#tag-manager');

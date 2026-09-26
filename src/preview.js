@@ -64,7 +64,8 @@ window.WELLIO_PREVIEW = true;
         hours: sleep,
         quality: Math.max(1, Math.min(5, Math.round(sleep - 3 + (rnd() - 0.5)))),
         pain: rnd() < 0.24, painTags: rnd() < 0.18 ? ['Lombaires'] : [], painNote: '',
-        numbness: rnd() < 0.14, numbTags: rnd() < 0.1 ? ['Main droite'] : [], numbNote: ''
+        numbness: rnd() < 0.14, numbTags: rnd() < 0.1 ? ['Main droite'] : [], numbNote: '',
+        dental: rnd() < 0.78, dentalTags: rnd() < 0.25 ? ['Gêne'] : [], dentalNote: ''
       },
       symptoms: { tags: symps.slice(0, Math.min(nSym, symps.length)), note: '' },
       stress,

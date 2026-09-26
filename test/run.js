@@ -111,6 +111,14 @@ function seed() {
   await page.locator('#tags-pain .chip', { hasText: 'Nuque' }).first().click();
   await page.waitForTimeout(300);
   check('zone de douleur enregistrée', await page.evaluate(() => DB.entries[todayISO()].sleep.painTags.includes('Nuque')));
+  await page.locator('#f-dental').click();
+  await page.waitForTimeout(200);
+  check('appareil dentaire activé', await page.evaluate(() => DB.entries[todayISO()].sleep.dental === true));
+  check('détails appareil dentaire affichés', await page.locator('#dental-details').isVisible());
+  await page.locator('#tags-dental .chip', { hasText: /^Gêne$/ }).first().click();  // « Aucune gêne » contient aussi « gêne »
+  await page.waitForTimeout(250);
+  check('ressenti appareil dentaire enregistré', await page.evaluate(() => DB.entries[todayISO()].sleep.dentalTags.includes('Gêne')));
+  check('appareil dentaire dans les variables stats', await page.evaluate(() => VARS.some(v => v.key === 'dental')));
   await page.screenshot({ path: path.join(SHOTS, '02-journal-bas.png'), fullPage: false });
 
   // ajout d'un tag personnalisé (fenêtre intégrée, pas de prompt() natif)
@@ -218,8 +226,8 @@ function seed() {
   const csv = await page.evaluate(() => exportCSVWide());
   const rows = csv.trim().split('\n');
   check('CSV : une ligne par jour + en-tête', rows.length === (await page.evaluate(() => Object.keys(DB.entries).length)) + 1, rows.length + ' lignes');
-  check('CSV : 36 colonnes', rows[0].split(';').length === 36, rows[0].split(';').length + '');
-  check('CSV : pas de séparateur cassé', rows.every(l => l.split(';').length >= 36));
+  check('CSV : 39 colonnes', rows[0].split(';').length === 39, rows[0].split(';').length + '');
+  check('CSV : pas de séparateur cassé', rows.every(l => l.split(';').length >= 39));
   check('CSV : colonnes boissons présentes', rows[0].includes('boissons_total_ml') && rows[0].includes('dernier_cafe'));
   const csvLong = await page.evaluate(() => exportCSVLong());
   check('CSV détaillé non vide', csvLong.split('\n').length > 500);
