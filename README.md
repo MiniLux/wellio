@@ -95,7 +95,25 @@ ne sont pas partagées entre les deux.
 
 ---
 
-## 3. Saisir les boissons
+## 3. Le calendrier
+
+Déplié, il affiche le mois entier (6 semaines) ; les pastilles sous chaque jour indiquent
+le niveau de remplissage et un point orange signale un jour avec symptômes.
+
+Dès qu'on descend dans le formulaire (plus de 40 px), il se replie en douceur sur la seule
+semaine du jour sélectionné et reste accessible en haut de l'écran ; il se redéploie
+automatiquement en revenant en haut (moins de 12 px). Les flèches suivent le mode :
+mois par mois quand il est déplié, semaine par semaine quand il est replié — le balayage
+horizontal fait la même chose. Changer de jour depuis la barre repliée ne fait pas remonter
+le formulaire.
+
+Techniquement : `#cal-vp` est une fenêtre à hauteur animée, `#cal-grid` glisse en
+`translateY` pour amener la bonne semaine dedans (`applyCalendarMode()` dans
+`src/js/02-journal.js`). Les seuils de repli/dépli sont dans `bindCalendarCollapse()`.
+
+---
+
+## 4. Saisir les boissons
 
 Carte **Boissons** de l'écran Journal :
 
@@ -116,7 +134,7 @@ boisson dans *Données → Mes boissons*, où tu peux aussi en ajouter ou en sup
 
 ---
 
-## 4. Les données
+## 5. Les données
 
 | Où | Quoi |
 |---|---|
@@ -145,7 +163,7 @@ L'app affiche un rappel si la dernière sauvegarde date de plus de 30 jours.
 
 ---
 
-## 5. L'écran Stats
+## 6. L'écran Stats
 
 Les boissons y comptent comme quatre variables à part entière — volume total, nombre de
 boissons caféinées, verres d'alcool, heure du dernier café — ce qui permet des questions
@@ -169,7 +187,7 @@ Rappel affiché dans l'app : une corrélation n'est pas une causalité. C'est un
 
 ---
 
-## 6. Modifier l'app
+## 7. Modifier l'app
 
 ```
 src/app.css          styles

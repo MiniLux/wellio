@@ -6,7 +6,7 @@
 'use strict';
 
 const APP_NAME = 'Wellio';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const SCHEMA_VERSION = 2;
 const LS_KEY = 'wellio.db.v1';
 const IDB_NAME = 'wellio';

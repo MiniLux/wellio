@@ -320,6 +320,7 @@ function bindData() {
 function showScreen(name) {
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'scr-' + name));
   $$('.tabbar button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.scr === name)));
+  if (name === 'journal') requestAnimationFrame(applyCalendarMode);
   if (name === 'stats') renderStats();
   if (name === 'data') renderDataScreen();
   haptic();
@@ -332,6 +333,7 @@ async function boot() {
 
   buildStaticControls();
   bindForm();
+  bindCalendarCollapse();
   bindStats();
   bindData();
   $$('.tabbar button').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.scr)));

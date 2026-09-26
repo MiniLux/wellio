@@ -86,6 +86,37 @@ function seed() {
   check('pastilles de données présentes', (await page.locator('#cal-grid .dot.filled').count()) > 10);
   await page.screenshot({ path: path.join(SHOTS, '01-journal.png') });
 
+  // calendrier repliable
+  console.log('\n— Calendrier —');
+  const vpH = () => page.locator('#cal-vp').evaluate(n => n.getBoundingClientRect().height);
+  const fullH = await vpH();
+  check('calendrier déplié au départ', fullH > 150, Math.round(fullH) + 'px');
+  await page.locator('#day-scroll').evaluate(n => n.scrollTo(0, 300));
+  await page.waitForTimeout(600);
+  const smallH = await vpH();
+  check('replié au défilement', await page.locator('.cal-wrap.compact').count() === 1);
+  check('hauteur réduite à une semaine', smallH > 20 && smallH < fullH / 4, Math.round(smallH) + 'px');
+  check('semaine du jour sélectionné visible', await page.evaluate(() => {
+    const grid = document.querySelector('#cal-grid');
+    const cell = grid.querySelector('.day.sel');
+    const vp = document.querySelector('#cal-vp').getBoundingClientRect();
+    const r = cell.getBoundingClientRect();
+    return r.top >= vp.top - 2 && r.bottom <= vp.bottom + 2;
+  }));
+  check('navigation par semaine en mode replié', await page.evaluate(async () => {
+    const before = selDate;
+    document.querySelector('#next-month').click();
+    await new Promise(r => setTimeout(r, 200));
+    return selDate === addDays(before, 7);
+  }));
+  check('le formulaire ne remonte pas en mode replié', await page.locator('#day-scroll').evaluate(n => n.scrollTop > 100));
+  await page.locator('#day-scroll').evaluate(n => n.scrollTo(0, 0));
+  await page.waitForTimeout(600);
+  check('redéplié en haut de page', await page.locator('.cal-wrap.compact').count() === 0);
+  check('hauteur restaurée', Math.abs((await vpH()) - fullH) < 2);
+  await page.locator('#btn-today').click();
+  await page.waitForTimeout(300);
+
   // saisie manuelle
   console.log('\n— Saisie —');
   await page.locator('#f-steps').fill('8421');

@@ -4,6 +4,36 @@
 
 let selDate = todayISO();
 let calMonth = null; // {y, m}
+let calCompact = false; // replié sur une seule semaine
+
+/** Ajuste la hauteur du calendrier (6 semaines ou 1) et fait glisser la grille
+ *  pour amener la semaine du jour sélectionné dans la fenêtre visible. */
+function applyCalendarMode() {
+  const vp = $('#cal-vp'), grid = $('#cal-grid');
+  const first = grid.firstElementChild;
+  if (!first) return;
+  const rowH = first.offsetHeight;
+  if (!rowH) return; // écran masqué ou mise en page pas encore faite
+  if (calCompact) {
+    const cells = Array.from(grid.children);
+    const idx = cells.findIndex(b => b.dataset.date === selDate);
+    const row = idx >= 0 ? Math.floor(idx / 7) : 0;
+    vp.style.height = rowH + 'px';
+    grid.style.transform = `translateY(${-row * rowH}px)`;
+  } else {
+    vp.style.height = rowH * 6 + 'px';
+    grid.style.transform = 'translateY(0)';
+  }
+}
+
+function setCalCompact(v) {
+  if (calCompact === v) return;
+  calCompact = v;
+  document.querySelector('.cal-wrap').classList.toggle('compact', v);
+  $('#prev-month').setAttribute('aria-label', v ? 'Semaine précédente' : 'Mois précédent');
+  $('#next-month').setAttribute('aria-label', v ? 'Semaine suivante' : 'Mois suivant');
+  applyCalendarMode();
+}
 
 /* ---------- Calendrier ---------- */
 function renderCalendar() {
@@ -41,6 +71,7 @@ function renderCalendar() {
     }, [el('span', { class: 'num', text: String(d.getDate()) }), dots]));
   }
   grid.replaceChildren(frag);
+  applyCalendarMode();
 }
 
 function selectDate(ds) {
@@ -50,7 +81,8 @@ function selectDate(ds) {
   renderCalendar();
   renderDay();
   haptic();
-  $('#day-scroll').scrollTop = 0;
+  // en mode replié on reste à la hauteur de lecture courante
+  if (!calCompact) $('#day-scroll').scrollTop = 0;
 }
 
 function shiftMonth(delta) {
@@ -316,8 +348,8 @@ function bindForm() {
   });
 
   // Navigation calendrier
-  $('#prev-month').addEventListener('click', () => shiftMonth(-1));
-  $('#next-month').addEventListener('click', () => shiftMonth(1));
+  $('#prev-month').addEventListener('click', () => calStep(-1));
+  $('#next-month').addEventListener('click', () => calStep(1));
   $('#btn-today').addEventListener('click', () => selectDate(todayISO()));
 
   // Swipe horizontal sur le calendrier
@@ -327,9 +359,32 @@ function bindForm() {
   cw.addEventListener('touchend', e => {
     if (x0 === null) return;
     const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
-    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) shiftMonth(dx < 0 ? 1 : -1);
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) calStep(dx < 0 ? 1 : -1);
     x0 = null;
   }, { passive: true });
+}
+
+/** Un pas de navigation : un mois si le calendrier est déplié, une semaine sinon. */
+function calStep(dir) {
+  if (calCompact) selectDate(addDays(selDate, dir * 7));
+  else shiftMonth(dir);
+}
+
+function bindCalendarCollapse() {
+  const sc = $('#day-scroll');
+  let ticking = false;
+  sc.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      const y = sc.scrollTop;
+      if (!calCompact && y > 40) setCalCompact(true);
+      else if (calCompact && y < 12) setCalCompact(false);
+    });
+  }, { passive: true });
+  let rz;
+  window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(applyCalendarMode, 120); });
 }
 
 function fmtHours(v) {

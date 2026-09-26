@@ -110,7 +110,17 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .cal-head button.today { color: var(--accent); font-size: 14px; font-weight: 550; padding: 8px 6px 8px 10px; }
 .dow { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 6px 2px; }
 .dow span { text-align: center; font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
-.grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 6px 8px; }
+/* Le calendrier se replie sur la semaine du jour sélectionné quand on descend
+   dans le formulaire, et se redéploie dès qu'on revient en haut. */
+.grid-vp { overflow: hidden; padding: 0 6px; margin-bottom: 8px; transition: height .28s cubic-bezier(.22, .61, .36, 1); }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); transition: transform .28s cubic-bezier(.22, .61, .36, 1); will-change: transform; }
+.cal-head, .dow { transition: padding .28s cubic-bezier(.22, .61, .36, 1), opacity .2s; }
+.cal-wrap.compact .cal-head { padding-bottom: 2px; }
+.cal-wrap.compact .dow { padding-bottom: 0; }
+.cal-wrap.compact { box-shadow: 0 1px 6px rgba(0, 0, 0, .06); }
+@media (prefers-reduced-motion: reduce) {
+  .grid-vp, .grid, .cal-head, .dow { transition: none; }
+}
 .day {
   position: relative; aspect-ratio: 1 / 1; max-height: 46px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;

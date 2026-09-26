@@ -2,7 +2,7 @@
    Stratégie : réseau d'abord pour la page (pour récupérer les mises à jour),
    cache d'abord pour les ressources statiques. Les données du journal ne
    passent jamais par ici : elles restent dans IndexedDB / localStorage. */
-const CACHE = 'wellio-v1.2.0';
+const CACHE = 'wellio-v1.3.0';
 const SHELL = [
   '/',
   '/index.html',

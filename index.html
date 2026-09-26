@@ -130,7 +130,17 @@ h1, h2, h3 { margin: 0; font-weight: 650; letter-spacing: -0.01em; }
 .cal-head button.today { color: var(--accent); font-size: 14px; font-weight: 550; padding: 8px 6px 8px 10px; }
 .dow { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 6px 2px; }
 .dow span { text-align: center; font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: 0.04em; }
-.grid { display: grid; grid-template-columns: repeat(7, 1fr); padding: 0 6px 8px; }
+/* Le calendrier se replie sur la semaine du jour sélectionné quand on descend
+   dans le formulaire, et se redéploie dès qu'on revient en haut. */
+.grid-vp { overflow: hidden; padding: 0 6px; margin-bottom: 8px; transition: height .28s cubic-bezier(.22, .61, .36, 1); }
+.grid { display: grid; grid-template-columns: repeat(7, 1fr); transition: transform .28s cubic-bezier(.22, .61, .36, 1); will-change: transform; }
+.cal-head, .dow { transition: padding .28s cubic-bezier(.22, .61, .36, 1), opacity .2s; }
+.cal-wrap.compact .cal-head { padding-bottom: 2px; }
+.cal-wrap.compact .dow { padding-bottom: 0; }
+.cal-wrap.compact { box-shadow: 0 1px 6px rgba(0, 0, 0, .06); }
+@media (prefers-reduced-motion: reduce) {
+  .grid-vp, .grid, .cal-head, .dow { transition: none; }
+}
 .day {
   position: relative; aspect-ratio: 1 / 1; max-height: 46px;
   display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
@@ -313,7 +323,7 @@ dialog p { font-size: 14px; color: var(--ink-2); margin: 0 0 14px; line-height: 
         <button class="nav" id="next-month" aria-label="Mois suivant"><svg viewBox="0 0 11 18"><path d="M1.5 1.5 9 9l-7.5 7.5"/></svg></button>
       </div>
       <div class="dow"><span>L</span><span>M</span><span>M</span><span>J</span><span>V</span><span>S</span><span>D</span></div>
-      <div class="grid" id="cal-grid"></div>
+      <div class="grid-vp" id="cal-vp"><div class="grid" id="cal-grid"></div></div>
     </div>
 
     <div class="scroll" id="day-scroll">
@@ -574,7 +584,7 @@ dialog p { font-size: 14px; color: var(--ink-2); margin: 0 0 14px; line-height: 
 'use strict';
 
 const APP_NAME = 'Wellio';
-const APP_VERSION = '1.2.0';
+const APP_VERSION = '1.3.0';
 const SCHEMA_VERSION = 2;
 const LS_KEY = 'wellio.db.v1';
 const IDB_NAME = 'wellio';
@@ -950,6 +960,36 @@ function haptic() { if (navigator.vibrate) { try { navigator.vibrate(8); } catch
 
 let selDate = todayISO();
 let calMonth = null; // {y, m}
+let calCompact = false; // replié sur une seule semaine
+
+/** Ajuste la hauteur du calendrier (6 semaines ou 1) et fait glisser la grille
+ *  pour amener la semaine du jour sélectionné dans la fenêtre visible. */
+function applyCalendarMode() {
+  const vp = $('#cal-vp'), grid = $('#cal-grid');
+  const first = grid.firstElementChild;
+  if (!first) return;
+  const rowH = first.offsetHeight;
+  if (!rowH) return; // écran masqué ou mise en page pas encore faite
+  if (calCompact) {
+    const cells = Array.from(grid.children);
+    const idx = cells.findIndex(b => b.dataset.date === selDate);
+    const row = idx >= 0 ? Math.floor(idx / 7) : 0;
+    vp.style.height = rowH + 'px';
+    grid.style.transform = `translateY(${-row * rowH}px)`;
+  } else {
+    vp.style.height = rowH * 6 + 'px';
+    grid.style.transform = 'translateY(0)';
+  }
+}
+
+function setCalCompact(v) {
+  if (calCompact === v) return;
+  calCompact = v;
+  document.querySelector('.cal-wrap').classList.toggle('compact', v);
+  $('#prev-month').setAttribute('aria-label', v ? 'Semaine précédente' : 'Mois précédent');
+  $('#next-month').setAttribute('aria-label', v ? 'Semaine suivante' : 'Mois suivant');
+  applyCalendarMode();
+}
 
 /* ---------- Calendrier ---------- */
 function renderCalendar() {
@@ -987,6 +1027,7 @@ function renderCalendar() {
     }, [el('span', { class: 'num', text: String(d.getDate()) }), dots]));
   }
   grid.replaceChildren(frag);
+  applyCalendarMode();
 }
 
 function selectDate(ds) {
@@ -996,7 +1037,8 @@ function selectDate(ds) {
   renderCalendar();
   renderDay();
   haptic();
-  $('#day-scroll').scrollTop = 0;
+  // en mode replié on reste à la hauteur de lecture courante
+  if (!calCompact) $('#day-scroll').scrollTop = 0;
 }
 
 function shiftMonth(delta) {
@@ -1262,8 +1304,8 @@ function bindForm() {
   });
 
   // Navigation calendrier
-  $('#prev-month').addEventListener('click', () => shiftMonth(-1));
-  $('#next-month').addEventListener('click', () => shiftMonth(1));
+  $('#prev-month').addEventListener('click', () => calStep(-1));
+  $('#next-month').addEventListener('click', () => calStep(1));
   $('#btn-today').addEventListener('click', () => selectDate(todayISO()));
 
   // Swipe horizontal sur le calendrier
@@ -1273,9 +1315,32 @@ function bindForm() {
   cw.addEventListener('touchend', e => {
     if (x0 === null) return;
     const dx = e.changedTouches[0].clientX - x0, dy = e.changedTouches[0].clientY - y0;
-    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) shiftMonth(dx < 0 ? 1 : -1);
+    if (Math.abs(dx) > 55 && Math.abs(dx) > Math.abs(dy) * 1.6) calStep(dx < 0 ? 1 : -1);
     x0 = null;
   }, { passive: true });
+}
+
+/** Un pas de navigation : un mois si le calendrier est déplié, une semaine sinon. */
+function calStep(dir) {
+  if (calCompact) selectDate(addDays(selDate, dir * 7));
+  else shiftMonth(dir);
+}
+
+function bindCalendarCollapse() {
+  const sc = $('#day-scroll');
+  let ticking = false;
+  sc.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      const y = sc.scrollTop;
+      if (!calCompact && y > 40) setCalCompact(true);
+      else if (calCompact && y < 12) setCalCompact(false);
+    });
+  }, { passive: true });
+  let rz;
+  window.addEventListener('resize', () => { clearTimeout(rz); rz = setTimeout(applyCalendarMode, 120); });
 }
 
 function fmtHours(v) {
@@ -2142,6 +2207,7 @@ function bindData() {
 function showScreen(name) {
   $$('.screen').forEach(s => s.classList.toggle('active', s.id === 'scr-' + name));
   $$('.tabbar button').forEach(b => b.setAttribute('aria-selected', String(b.dataset.scr === name)));
+  if (name === 'journal') requestAnimationFrame(applyCalendarMode);
   if (name === 'stats') renderStats();
   if (name === 'data') renderDataScreen();
   haptic();
@@ -2154,6 +2220,7 @@ async function boot() {
 
   buildStaticControls();
   bindForm();
+  bindCalendarCollapse();
   bindStats();
   bindData();
   $$('.tabbar button').forEach(b => b.addEventListener('click', () => showScreen(b.dataset.scr)));
