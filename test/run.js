@@ -117,6 +117,45 @@ function seed() {
   await page.locator('#btn-today').click();
   await page.waitForTimeout(300);
 
+  // régression : un tag coché sur une journée encore vide doit être écrit en base
+  // (l'entrée créée pour l'affichage est supprimée si elle est vide — le tableau
+  //  capturé au rendu pointait alors sur un objet détaché et la coche était perdue)
+  console.log('\n— Journée vierge (régression) —');
+  const blankDay = await page.evaluate(() => {
+    const d = addDays(todayISO(), -2);
+    delete DB.entries[d];
+    persist(true);
+    selectDate(d);
+    return d;
+  });
+  await page.waitForTimeout(350);
+  check('journée bien vide au départ', await page.evaluate(d => !DB.entries[d], blankDay));
+  await page.locator('#tags-symptom .chip', { hasText: /^Migraine$/ }).first().click();
+  await page.waitForTimeout(600);
+  check('tag écrit en mémoire', await page.evaluate(d => !!DB.entries[d] && DB.entries[d].symptoms.tags.includes('Migraine'), blankDay));
+  check('tag écrit dans le stockage', await page.evaluate(d => {
+    const db = JSON.parse(localStorage.getItem('wellio.db.v1'));
+    return !!db.entries[d] && db.entries[d].symptoms.tags.includes('Migraine');
+  }, blankDay));
+  // aller-retour sur un autre jour
+  await page.evaluate(d => selectDate(addDays(d, -1)), blankDay);
+  await page.waitForTimeout(200);
+  await page.evaluate(d => selectDate(d), blankDay);
+  await page.waitForTimeout(350);
+  check('tag toujours coché au retour', (await page.locator('#tags-symptom .chip', { hasText: /^Migraine$/ }).first().getAttribute('class')).includes('on'));
+  // même scénario avec un tag de repas (rangée défilante + tri des sélectionnés)
+  await page.evaluate(d => { delete DB.entries[d]; persist(true); selectDate(d); }, blankDay);
+  await page.waitForTimeout(350);
+  await page.locator('#tags-meal-lunch .chip', { hasText: /^Gluten$/ }).first().click();
+  await page.waitForTimeout(600);
+  check('tag de repas écrit sur une journée vierge', await page.evaluate(d => !!DB.entries[d] && DB.entries[d].meals.lunch.tags.includes('Gluten'), blankDay));
+  // décocher doit bien vider la journée
+  await page.locator('#tags-meal-lunch .chip.on', { hasText: /^Gluten$/ }).first().click();
+  await page.waitForTimeout(500);
+  check('journée re-supprimée quand on décoche tout', await page.evaluate(d => !DB.entries[d], blankDay));
+  await page.locator('#btn-today').click();
+  await page.waitForTimeout(300);
+
   // saisie manuelle
   console.log('\n— Saisie —');
   await page.locator('#f-steps').fill('8421');

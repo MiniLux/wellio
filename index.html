@@ -584,7 +584,7 @@ dialog p { font-size: 14px; color: var(--ink-2); margin: 0 0 14px; line-height: 
 'use strict';
 
 const APP_NAME = 'Wellio';
-const APP_VERSION = '1.3.0';
+const APP_VERSION = '1.3.1';
 const SCHEMA_VERSION = 2;
 const LS_KEY = 'wellio.db.v1';
 const IDB_NAME = 'wellio';
@@ -1048,8 +1048,12 @@ function shiftMonth(delta) {
 }
 
 /* ---------- Chips de tags ---------- */
-function renderChips(container, kind, selected, onChange, tone, sortSelectedFirst) {
+function renderChips(container, kind, getList, onChange, tone, sortSelectedFirst) {
   const box = typeof container === 'string' ? $(container) : container;
+  // `getList` renvoie le tableau vivant au moment du clic : une journée vierge
+  // est retirée de la base après affichage (pruneIfBlank), donc un tableau
+  // capturé au rendu peut appartenir à un objet déjà détaché — on le relit.
+  const selected = getList();
   const list = DB.tags[kind] || [];
   const extra = selected.filter(t => !list.includes(t));
   let all = [...list, ...extra];
@@ -1062,10 +1066,11 @@ function renderChips(container, kind, selected, onChange, tone, sortSelectedFirs
     frag.appendChild(el('button', {
       type: 'button', class: 'chip' + (tone ? ' tone-' + tone : '') + (on ? ' on' : ''), text: tag,
       onclick: () => {
-        const i = selected.indexOf(tag);
-        if (i >= 0) selected.splice(i, 1); else selected.push(tag);
+        const arr = getList();
+        const i = arr.indexOf(tag);
+        if (i >= 0) arr.splice(i, 1); else arr.push(tag);
         haptic();
-        renderChips(box, kind, selected, onChange, tone);
+        renderChips(box, kind, getList, onChange, tone);
         onChange();
       }
     }));
@@ -1076,9 +1081,10 @@ function renderChips(container, kind, selected, onChange, tone, sortSelectedFirs
       const v = await promptDlg('Nouveau tag — ' + (TAG_KIND_LABELS[kind] || kind), 'Nom du tag');
       if (!v) return;
       if (!DB.tags[kind].includes(v)) DB.tags[kind].push(v);
-      if (!selected.includes(v)) selected.push(v);
+      const arr = getList();
+      if (!arr.includes(v)) arr.push(v);
       haptic();
-      renderChips(box, kind, selected, onChange, tone);
+      renderChips(box, kind, getList, onChange, tone);
       onChange();
     }
   }));
@@ -1181,10 +1187,11 @@ function renderDrinks() {
 
 /* ---------- Formulaire du jour ---------- */
 let flagTimer;
-function touched() {
-  const e = ensureEntry(selDate);
+function touched(date) {
+  const d = date || selDate; // la journée visée au moment où le champ a été modifié
+  const e = ensureEntry(d);
   e.updatedAt = new Date().toISOString();
-  pruneIfBlank(selDate);
+  pruneIfBlank(d);
   persist();
   renderCalendar();
   const f = $('#saved-flag');
@@ -1358,19 +1365,20 @@ function syncSeg(sel, value) {
 }
 
 function renderDay() {
-  const e = getEntry(selDate) || emptyEntry(selDate);
+  const day = selDate; // figé : les gestionnaires écrivent dans la journée affichée
+  const e = getEntry(day) || emptyEntry(day);
   $('#day-title').textContent = longDate(selDate);
 
   MEALS.forEach(m => {
     $('#f-meal-' + m.key).value = e.meals[m.key].text || '';
-    renderChips('#tags-meal-' + m.key, 'food', ensureEntry(selDate).meals[m.key].tags, touched, 'food', true);
+    renderChips('#tags-meal-' + m.key, 'food', () => ensureEntry(day).meals[m.key].tags, () => touched(day), 'food', true);
   });
 
   renderDrinks();
   $('#f-drink-note').value = e.drinks.note || '';
 
   $('#f-steps').value = e.steps == null ? '' : e.steps;
-  renderChips('#tags-activity', 'activity', ensureEntry(selDate).activity.tags, touched, 'act');
+  renderChips('#tags-activity', 'activity', () => ensureEntry(day).activity.tags, () => touched(day), 'act');
   $('#f-actmin').value = e.activity.minutes == null ? 0 : e.activity.minutes;
   $('#o-actmin').textContent = fmtMin(e.activity.minutes);
   $('#f-activity-note').value = e.activity.note || '';
@@ -1382,24 +1390,24 @@ function renderDay() {
   $('#f-pain').setAttribute('aria-pressed', String(!!e.sleep.pain));
   $('#pain-details').hidden = !e.sleep.pain;
   if (e.sleep.pain) {
-    renderChips('#tags-pain', 'pain', ensureEntry(selDate).sleep.painTags, touched, 'sym');
+    renderChips('#tags-pain', 'pain', () => ensureEntry(day).sleep.painTags, () => touched(day), 'sym');
     $('#f-pain-note').value = e.sleep.painNote || '';
   }
   $('#f-numb').setAttribute('aria-pressed', String(!!e.sleep.numbness));
   $('#numb-details').hidden = !e.sleep.numbness;
   if (e.sleep.numbness) {
-    renderChips('#tags-numb', 'numb', ensureEntry(selDate).sleep.numbTags, touched, 'sym');
+    renderChips('#tags-numb', 'numb', () => ensureEntry(day).sleep.numbTags, () => touched(day), 'sym');
     $('#f-numb-note').value = e.sleep.numbNote || '';
   }
 
   $('#f-dental').setAttribute('aria-pressed', String(!!e.sleep.dental));
   $('#dental-details').hidden = !e.sleep.dental;
   if (e.sleep.dental) {
-    renderChips('#tags-dental', 'dental', ensureEntry(selDate).sleep.dentalTags, touched, 'sym');
+    renderChips('#tags-dental', 'dental', () => ensureEntry(day).sleep.dentalTags, () => touched(day), 'sym');
     $('#f-dental-note').value = e.sleep.dentalNote || '';
   }
 
-  renderChips('#tags-symptom', 'symptom', ensureEntry(selDate).symptoms.tags, touched, 'sym');
+  renderChips('#tags-symptom', 'symptom', () => ensureEntry(day).symptoms.tags, () => touched(day), 'sym');
   $('#f-symptom-note').value = e.symptoms.note || '';
 
   $('#f-stress').value = e.stress == null ? 5 : e.stress;
@@ -1408,7 +1416,7 @@ function renderDay() {
   $('#f-mood-note').value = e.mood.note || '';
 
   // une entrée vide créée par ensureEntry ne doit pas rester en base
-  pruneIfBlank(selDate);
+  pruneIfBlank(day);
 }
 
 

@@ -214,6 +214,12 @@ pas de CDN, pas de build à installer.
 Pour changer la liste des tags ou des boissons proposés par défaut : `DEFAULT_TAGS` et
 `DEFAULT_DRINKS` dans `src/js/01-store.js` (ce qui est ajouté depuis l'app est stocké dans
 les données de l'utilisateur).
+⚠️ Piège à connaître : une journée vide est retirée de `DB.entries` après affichage
+(`pruneIfBlank`). Tout gestionnaire d'événement doit donc relire l'entrée au moment du clic
+(`ensureEntry(day)`) au lieu de capturer un objet ou un tableau au moment du rendu — sinon
+la saisie part dans un objet détaché et n'est jamais enregistrée. C'est pour ça que
+`renderChips()` reçoit une fonction `getList` et non un tableau.
+
 Pour ajouter un champ suivi par les stats : ajoute-le à `emptyEntry()` puis une entrée
 dans `VARS` (`src/js/03-stats.js`) — il apparaîtra automatiquement dans les corrélations,
 l'explorateur et les exports.
